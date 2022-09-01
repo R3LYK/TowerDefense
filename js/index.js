@@ -8,37 +8,64 @@ canvas.height = 768;
 c.fillStyle = 'blue';
 c.fillRect(0, 0, canvas.width, canvas.height);
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~~GLOBAL VARIABLES~~~~~//
+let chosenTower;
+let towerCost;
+let playerMoney = 200000;
+let playerLives = 50;
 
+zeroPos = {x: 0, y: 0};
 
-const placementTilesData2D = [];
+const enemies = [];
+const stockBroker = Broker;
+const manager = HFManager;
+let enemyCount = 3;
+let round = 0;
 
-for (let i = 0; i < placementTilesData.length; i+=20) {
-    placementTilesData2D.push(placementTilesData.slice(i, i + 20));
-}
+const buildings = [];
+let activeTile = undefined;
 
+let chosenBuilding;
+
+let damage = Building.damage;
+let brokerOffset = 150;
+let managerOffset = 200;
+let animateId;
+const mouse = {
+    x: 10,
+    y: 10,
+    width: 0.1,
+    height: 0.1,
+    clicked: false,
+    hover: false,
+};
+
+const image = new Image();
+
+const money = document.getElementById('money');
+const lives = document.getElementById('lives');
+let moneyUpdate = () => {
+    money.innerHTML = ('MONEY: ' + playerMoney);
+};
 const cellSize = 64;
 const gameGrid = [];
 
-
-
-function createGrid(){
-    for (let y = 0; y < canvas.height; y += cellSize){
-        for (let x = 0; x < canvas.width; x += cellSize){
-            gameGrid.push(new Cell(x, y));
-        }
-    }
-}
-
-function handleGameGrid(){
-    for (let i = 0; i < gameGrid.length; i++){
-        gameGrid[i].draw();
-    }
-}
-
-
-
+const placementTilesData2D = [];
 const placementTiles = [];
 
+//~~starts animation loop & loads map image~~//
+image.onload = () => {
+    animate();
+}
+image.src = 'img/newMap.png';
+
+//~~~~~creating array of arrays representing 'tiles' using placementTileData array~~~~~//
+for (let i = 0; i < placementTilesData.length; i+=20) {
+    placementTilesData2D.push(placementTilesData.slice(i, i + 20));
+};
+
+//~~inserting allowed placement tiles from placementTile data arrays^2~~//
 placementTilesData2D.forEach((row, y) => {
     row.forEach((symbol, x) => {
         if (symbol === 14) {
@@ -55,20 +82,21 @@ placementTilesData2D.forEach((row, y) => {
     })
 });
 
+//~~calculating grid (temporary for dev purposes)~~//
+function createGrid(){
+    for (let y = 0; y < canvas.height; y += cellSize){
+        for (let x = 0; x < canvas.width; x += cellSize){
+            gameGrid.push(new Cell(x, y));
+        };
+    };
+};
 
-const image = new Image();
-
-image.onload = () => {
-    animate();
-}
-image.src = 'img/newMap.png';
-
-
-// const stockBrokers = [];
-const enemies = [];
-const stockBroker = Broker;
-const manager = HFManager;
-let enemyCount = 3;
+//~~draws game grid (temporary for dev purposes)~~//
+function handleGameGrid(){
+    for (let i = 0; i < gameGrid.length; i++){
+        gameGrid[i].draw();
+    };
+};
 
 function spawnEnemies (enemyCount, enemyType, offSet) {
     
@@ -82,12 +110,7 @@ function spawnEnemies (enemyCount, enemyType, offSet) {
     }
 };
 
-const buildings = [];
-let activeTile = undefined;
-
-spawnEnemies(enemyCount, stockBroker, 150);
-spawnEnemies(enemyCount, manager, 250);
-
+//~~function for detecting mouse collision (deprecated, for now)~~//
 function collision(first, second){
     if (    !(  first.x > second.x + second.width ||
                 first.x + first.width < second.x ||
@@ -98,24 +121,11 @@ function collision(first, second){
     };
 };
 
-const fireBuilding = {
-    x: 1150,
-    y: 10,
-    width: 70,
-    height: 85,
-}
+let gameState = 'running';
 
-const waterBuilding = {
-    x: 1070,
-    y: 10,
-    width: 70,
-    height: 85,
-}
+const sortedEnemiesTest = [];
 
-let chosenBuilding; //DO NOT DELETE
-// let fireRadius = 250;
-
-let damage = Building.damage;
+let nextRound = document.getElementById('next_round');
 
 function removeEnemy() {
     for (let i = enemies.length -1; i >= 0; i--) {
@@ -123,46 +133,61 @@ function removeEnemy() {
         enemy.update();    
 
         if(enemy.position.x > canvas.width){
-            console.log('lose life')
+            // console.log('lose life')
             enemies.splice(i,1);
             playerLives -= 1;
             lives.innerHTML = ('LIVES: ' + playerLives)
         }
         if(playerLives === 0) {
             cancelAnimationFrame(animateId);
+            gameState = 'not running';
+            document.querySelector('#game_over').style.display = 'flex';
         }
     }
     if(enemies.length === 0) {
         enemyCount = (enemyCount + 2);
         brokerOffset = (brokerOffset- 2);
         managerOffset = (managerOffset- 2);
-        console.log('broker offset ' + brokerOffset);
+        // console.log('broker offset ' + brokerOffset);
         spawnEnemies(enemyCount, stockBroker, brokerOffset);
         spawnEnemies(enemyCount, manager, managerOffset);
+        round += 1;
+        console.log('ROUND: ' + round);
     }
 }
+
+function roundDelay() {
+    if(round > 1 && enemyCount === 0){
+        
+    }
+};
 
 function placeTiles() {
     placementTiles.forEach((tile) => {
         tile.update(mouse);
     });
-}
+};
 
-let brokerOffset = 150;
-let managerOffset = 200;
+function abc() {
+    iconArray.forEach((icon) => {
+        icon.update(mouse);
+    });
+};  
 
 function targetEnemy() {
+
     buildings.forEach((building) => {
         building.update();
         building.target = null;
+        
         const validEnemies = enemies.filter((enemy) => {
             const xDifference = enemy.center.x - building.center.x;
             const yDifference = enemy.center.y - building.center.y;
             const distance = Math.hypot(xDifference, yDifference);
             return distance < enemy.radius + building.fireRadius
-        })
+        });
+
         building.target = validEnemies[0];
-        //console.log(validEnemies);
 
         for (let i = building.projectiles.length -1; i>= 0; i--) {
             const projectile = building.projectiles[i];
@@ -175,7 +200,7 @@ function targetEnemy() {
             // projectile collision with enemy
             if (distance < projectile.enemy.radius + projectile.radius) {
                 //enemy health calculation
-                console.log(building.fireRadius);
+                // console.log(building.fireRadius);
                 projectile.enemy.health -= building.damage;
                 if (projectile.enemy.health <= 0) {
                     const enemyIndex = enemies.findIndex((enemy) => {
@@ -193,25 +218,60 @@ function targetEnemy() {
     })
 }
 
+const iconArray = [];
+const fireTower = new FireTower(zeroPos);
+const waterTower = new WaterTower(zeroPos);
+const iceTower = new IceTower(zeroPos);
+const windTower = new WindTower(zeroPos);
+
+let buildingIconArray = [FireTower, WaterTower, IceTower, WindTower];
+let iconName;
+
+function createIcons() {
+    buildingIconArray.forEach((building) => {
+        let x;
+        let y = 10;
+        
+        if(building === FireTower){
+            x = 900;
+            iconName = 'FIRE';
+        } else if (building === WaterTower){
+            x = 990;
+            iconName = 'WATER';
+        } else if (building === IceTower){
+            x = 1080;
+            iconName = 'ICE';
+        } else if (building === WindTower){
+            x = 1170;
+            iconName = 'WIND';
+        }
+        iconArray.push(
+            new BuildingIcons(x, y, building)
+        )  
+    })
+    // console.log(iconArray[0]);
+};
+
+//~~Calling all functions for creating map, UI, and running game~~//
+//~~Eventually this all needs to be refactored into a loop that runs-
+//~~for the entirety of the game~~//
+
 createGrid();
-
-let animateId;
-
+createIcons();
 
 function animate() {
     animateId = requestAnimationFrame(animate);
     //available function under window.requestAnimationFrame
     c.drawImage(image, 0, 0);
     handleGameGrid();   // creates grid layover for testing and dev purposes
-    // brokerFunction();   // spawns broker enemies
-    removeEnemy();    // spawns 'basic' enemies
+    removeEnemy();    // removes enemies if health === 0
     placeTiles();       //displays acceptable tile placement points  
-    targetEnemy();      // handles targeting of 'basic' enemies
-    // targetStockBroker(); //handles targeting of 'broker' enemies
-    chooseBuilding();   // handles allowing player to choose type of building for placement.
+    targetEnemy();   // handles targeting of 'basic' enemies
+    abc(); // Can't remember why it's called abc, or what it does. Future Kyler's problem.
 
-}
 
+
+};
 
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -219,17 +279,6 @@ function animate() {
 //~mouse tracking and event listeners~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-
-
-
-const mouse = {
-    x: 10,
-    y: 10,
-    width: 0.1,
-    height: 0.1,
-    clicked: false,
-}
 
 canvas.addEventListener('mousedown', function(){
     mouse.clicked = true;
@@ -241,6 +290,7 @@ canvas.addEventListener('mouseup', function(){
 
 
 let canvasPosition = canvas.getBoundingClientRect();
+
 canvas.addEventListener('mousemove', function(e){
     mouse.x = e.x - canvasPosition.left;
     mouse.y = e.y - canvasPosition.top;
@@ -252,11 +302,13 @@ canvas.addEventListener('mouseleave', function(){
 });
 
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~BUILDING PLACEMENT FUNCTION~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 canvas.addEventListener('click', () => {
-    chooseBuilding();
-    if(activeTile && !activeTile.isOccupied && playerMoney >= towerCost) {
+    if(activeTile && !activeTile.isOccupied && playerMoney > towerCost) {
         buildings.push(
-            new chosenTower({
+            new selectedTower({
                 position: {
                     x: activeTile.position.x,
                     y: activeTile.position.y
@@ -268,70 +320,17 @@ canvas.addEventListener('click', () => {
         console.log(buildings);
         money.innerHTML = playerMoney;
     }
+
+    // console.log('towerCost = ' + towerCost);
+
 });
-
-//~~START TESTING~~//
-
-let chosenTower;
-let towerCost;
-let playerMoney = 100;
-let playerLives = 50;
-
-const money = document.getElementById('money');
-const lives = document.getElementById('lives');
 
 money.innerHTML = ('MONEY: ' + playerMoney);
 lives.innerHTML = ('LIVES: ' + playerLives)
 
-let moneyUpdate = () => {
-    money.innerHTML = ('MONEY: ' + playerMoney);
-};
-
-function chooseBuilding(){
-    let fireStroke = 'yellow';
-    let waterStroke = 'black';
-    
-    let position = {
-        x: mouse.x,
-        y: mouse.y
-    }
-    const fireTower = new FireTower(position);
-    const waterTower = new WaterTower(position);
-
-    c.lineWidth = 3;
-    c.fillStyle = 'rgba(0,0,0,0.4)'
-
-    if(chosenBuilding === 1){
-        fireStroke = 'white';
-        waterStroke = 'black';
-    } else if (chosenBuilding == 2){
-        fireStroke = 'black';
-        waterStroke = 'white';
-    } else {
-        fireStroke = 'black';
-        waterStroke = 'black';
-    }
-    if (collision(mouse, fireBuilding) && mouse.clicked){
-        chosenBuilding = 1;
-        chosenTower = FireTower;
-        towerCost = fireTower.cost;
-    } else if (collision(mouse, waterBuilding) && mouse.clicked){
-        chosenBuilding = 2;
-        chosenTower = WaterTower;
-        towerCost = waterTower.cost;
-    }
-
-    c.fillRect(fireBuilding.x, fireBuilding.y, fireBuilding.width, fireBuilding.height);
-    c.strokeStyle = fireStroke;
-    c.strokeRect(fireBuilding.x, fireBuilding.y, fireBuilding.width, fireBuilding.height);
-
-    c.fillRect(waterBuilding.x, waterBuilding.y, waterBuilding.width, waterBuilding.height);
-    c.strokeStyle = waterStroke;
-    c.strokeRect(waterBuilding.x, waterBuilding.y, waterBuilding.width, waterBuilding.height);
-};
-
-//~~STOP TESTING~~//
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~ALLOWED PLACEMENT INDICATOR~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 window.addEventListener('mousemove', (event) => {
     mouse.x = event.clientX;
@@ -350,65 +349,80 @@ window.addEventListener('mousemove', (event) => {
             break
         }
     }
-    //console.log(activeTile);
+    // console.log(activeTile);
 })
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~SELECTED ICON INDICATOR~~~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+let selectedTower;
+
+window.addEventListener('click', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+
+    for (let i = 0; i < iconArray.length; i++) {
+        const icon = iconArray[i];
+        const mouseTracker = mouse.x > icon.x &&
+        mouse.x < icon.x + icon.width + 8 &&
+        mouse.y > icon.y &&
+        mouse.y < icon.y + icon.height + 8
+        
+        if (mouseTracker) {
+            activeIcon = icon;
+            break
+        }
+        if (mouseTracker && mouse.clicked){
+        }
+    };
+    selectedTower = activeIcon.towerType;
+    isSelected();
+    // console.log('selectedTower = ' + selectedTower); 
+    
+});
+
+let activeTower;
+
+canvas.addEventListener('click', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+
+    for (let i = 0; i < buildings.length; i++) {
+        const tower = buildings[i];
+        
+        const mouseTracker = 
+        mouse.x > tower.position.x &&
+        mouse.x < tower.position.x + tower.width &&
+        mouse.y > tower.position.y &&
+        mouse.y < tower.position.y + tower.height
+
+        if (mouseTracker){
+            activeTower = tower;
+        }
+        if (mouseTracker && mouse.clicked){
+        }
+    //console.log(activeTower.towerType)
+    };
+
+    //console.log(activeTower);
+});
+
+function isSelected() {
+    iconArray.forEach(icon => {
+        if (icon.towerType === selectedTower) {
+            icon.selectedStroke = 'black';
+            chosenTower = icon.towerType;
+            chosenBuilding = 1;
+            towerCost = waterTower.cost;
+        } else {
+            icon.selectedStroke = 'orange';
+        }
+    });
+    // console.log(chosenTower);
+};
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-
-
-
-
-
-
-
-
-// function targetStockBroker() {
-//     buildings.forEach((building) => {
-//         building.update();
-//         building.target = null;
-
-//         //targeting enemies using maths
-//         const validEnemies = stockBrokers.filter((stockBroker) => {
-//             const xDifference = stockBroker.center.x - building.center.x;
-//             const yDifference = stockBroker.center.y - building.center.y;
-//             const distance = Math.hypot(xDifference, yDifference);
-//             return distance < stockBroker.radius + building.radius
-//         })
-//         building.target = validEnemies[0];
-//         // console.log(validEnemies);
-
-//         //creating projectiles to be deployed from buildings
-//         for (let i = building.projectiles.length -1; i>= 0; i--) {
-//             const projectile = building.projectiles[i];
-//             projectile.update();
-            
-//             const xDifference = projectile.enemy.center.x - projectile.position.x;
-//             const yDifference = projectile.enemy.center.y - projectile.position.y;
-//             const distance = Math.hypot(xDifference, yDifference);
-
-//             // projectile collision with stockBroker
-//             if (distance < projectile.enemy.radius + projectile.radius) {
-//                 //stockBroker health calculation
-//                 projectile.enemy.health -= damage;
-//                 if (projectile.enemy.health <= 0) {
-//                     const stockBrokerIndex = stockBrokers.findIndex((stockBroker) => {
-//                         return projectile.enemy === stockBroker
-//                     })
-                    
-//                     if (stockBrokerIndex > -1) stockBrokers.splice(stockBrokerIndex, 1);
-//                 }
-//                 if(stockBrokers.length === 0) {
-//                     spawnBrokers(enemyCount);
-//                 }
-//                 // console.log(projectile.enemy.health);
-//                 building.projectiles.splice(i, 1);
-//             }
-//         }
-//     })
-// }
-

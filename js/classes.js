@@ -4,6 +4,8 @@ class PlacementTile {
     constructor({position = {x: 0, y: 0}}) {
         this.position = position;
         this.size = 64;
+        this.width = 64;
+        this.height = 64;
         this.color = 'rgba(255, 255, 255, .1)';
         this.occupied = false;
     };
@@ -23,9 +25,59 @@ class PlacementTile {
             mouse.y < this.position.y + this.size
         ) {
             // console.log('collision detected')
-            this.color = 'white'
-        } else {this.color = 'rgba(255, 255, 255, .1)';}
+            this.color = 'white';
+        } else {
+            this.color = 'rgba(25, 29, 255, .1)';
+        }
     };
+};
+
+class BuildingIcons {
+    constructor(x, y, building){
+        this.x = x;
+        this.y = y;
+        this.width = 70;
+        this.height = 85;
+        this.size = (this.width * 2) + (this.height * 2);
+        this.towerType = building;
+        this.iconName = iconName;
+        this.color = 'rgba(0,0,0,0.4)';
+        this.selectedStroke = 'orange';
+        this.isSelected = false;
+        
+    };
+
+    draw() {
+        c.lineWidth = 3;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.selectedStroke;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+        
+        // c.shadowColor = 'yellow';
+        // c.shadowBlur = 5;
+
+        c.font = '16px Arial';
+        c.fillStyle = 'black';
+        c.fillText(this.iconName, this.x + 10, this.y + 45)//TEMP TEMP TEMP//
+    };
+
+    update(mouse) {
+        this.draw()
+        const mouseDetection = (
+            mouse.x > this.x && 
+            mouse.x < this.x + this.width &&
+            mouse.y > this.y && 
+            mouse.y < this.y + this.height)
+
+        if  (mouseDetection){
+            this.color = 'rgba(25, 255, 255, .4)';
+        } else {
+            this.color = 'rgba(25, 255, 255, .2)';
+        }
+        
+    };
+
 };
 
 //copied to refactoring//
@@ -63,9 +115,9 @@ class Enemy {
     };
 
     draw() {
-        c.fillStyle = this.color;
         c.beginPath();
         c.arc(this.center.x, this.center.y, this.radius, 0, Math.PI * 2);
+        c.fillStyle = this.color;
         c.fill();
 
         // health
@@ -84,7 +136,7 @@ class Enemy {
         const xDistance = waypoint.x - this.center.x;
         const angle = Math.atan2(yDistance, xDistance);
 
-        const speed = 5;
+        const speed = 1;
 
         this.velocity.x = Math.cos(angle);
         this.velocity.y = Math.sin(angle);
@@ -106,7 +158,6 @@ class Enemy {
             this.waypointIndex++
         };
     };
-
 };
 
 class Broker extends Enemy {
@@ -130,7 +181,7 @@ class HFManager extends Enemy {
         this.radius = 40;
         this.health = 100;
         this.n = 100;
-        this.color = 'brown';
+        this.color = 'rgb(69, 26, 16)';
 
         this.money = 100;
     }
@@ -150,26 +201,41 @@ class Building {
         this.projectiles = [];
         this.target;
         this.frames = 0;
+        this.chosenBuilding = chosenBuilding;
+        this.fireRate = 30; //lower number = higher fire rate
         // this.radius = fireRadius;
     };
 
 
     draw() {
-            c.fillStyle = 'rgba(0, 0, 0, 0.18)';
-            c.arc(this.center.x, this.center.y, this.fireRadius, 0, Math.PI * 2);
-            c.fill();
             c.fillStyle = this.color;
             c.fillRect(this.position.x, this.position.y, this.width, 64);
+            
             c.beginPath();
-    };
+            c.arc(this.center.x, this.center.y, this.fireRadius, 0, Math.PI * 2);
+            c.fillStyle = 'rgba(255, 255, 255, .3)';
+            c.fill();
+            
+            c.font = '12px Arial';
+            c.fillStyle = 'black';
+            c.fillText(this.towerType, this.position.x + 40, this.position.y + 15)
+            
+            c.font = '12px Arial';
+            c.fillStyle = 'black';
+            c.fillText(('level: ' + this.towerLevel), this.position.x + 40, this.position.y + 30)
 
-    drawRadius() {
+            c.font = '12px Arial';
+            c.fillStyle = 'black';
+            c.fillText(('damage: ' + this.damage), this.position.x + 40, this.position.y + 45)
+    }
+
+    // drawRadius() {
         
-    };
+    // };
 
     update() {
         this.draw();
-        if(this.frames % 100 === 0 && this.target) {
+        if(this.frames % this.fireRate === 0 && this.target) {
             this.projectiles.push(
                 new Projectile({
                     position: {
@@ -201,10 +267,10 @@ class WaterTower extends Building {
 
         this.towerType = 'waterTower';
         this.towerLevel = 1;
-        this.color = 'rgba(6, 0, 192, 0.9)';
-        this.fireRadius = 200;
+        this.color = 'blue';
+        this.fireRadius = 175;
         this.damage = 20;
-        this.cost = 80;
+        this.cost = 1500;
     };
 };
 
@@ -225,10 +291,57 @@ class FireTower extends Building {
 
         this.towerType = 'fireTower';
         this.towerLevel = 1;
-        this.color = 'rgba(192, 0, 6, 0.9)';
+        this.color = 'red';
         this.fireRadius = 250;
         this.damage = 10;
-        this.cost = 50;
+        this.cost = 1000;
+    };
+};
+
+class IceTower extends Building {
+    constructor({position = {x: 0, y: 0}}) {
+        super(Building);
+        this.position = position;
+        this.width = 64 * 2;
+        this.height = 64;
+        this.center = {
+            x: this.position.x + this.width /2,
+            y: this.position.y + this.height / 2
+        };
+        
+        this.target;
+        this.frames = 0;
+
+
+        this.towerType = 'iceTower';
+        this.towerLevel = 1;
+        this.color = 'purple';
+        this.fireRadius = 225;
+        this.damage = 10;
+        this.cost = 1000;
+    };
+};
+
+class WindTower extends Building {
+    constructor({position = {x: 0, y: 0}}) {
+        super(Building);
+        this.position = position;
+        this.width = 64 * 2;
+        this.height = 64;
+        this.center = {
+            x: this.position.x + this.width /2,
+            y: this.position.y + this.height / 2
+        };
+        
+        this.target;
+        this.frames = 0;
+
+        this.towerType = 'windTower';
+        this.towerLevel = 1;
+        this.color = 'white';
+        this.fireRadius = 190;
+        this.damage = 100;
+        this.cost = 1000;
     };
 };
 
@@ -261,7 +374,7 @@ class Projectile {
             this.enemy.center.x - this.position.x
             )
 
-        const power = 5;
+        const power = 10;
         this.velocity.x = Math.cos(angle) * power;
         this.velocity.y = Math.sin(angle) * power;
 
