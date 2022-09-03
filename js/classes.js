@@ -41,10 +41,9 @@ class BuildingIcons {
         this.size = (this.width * 2) + (this.height * 2);
         this.towerType = building;
         this.iconName = iconName;
-        this.color = 'rgba(0,0,0,0.4)';
+        this.color = 'rgba(25, 255, 255, .2)';
         this.selectedStroke = 'orange';
-        this.isSelected = false;
-        
+        this.isSelected = false; 
     };
 
     draw() {
@@ -54,9 +53,6 @@ class BuildingIcons {
         c.strokeStyle = this.selectedStroke;
         c.strokeRect(this.x, this.y, this.width, this.height);
         
-        // c.shadowColor = 'yellow';
-        // c.shadowBlur = 5;
-
         c.font = '16px Arial';
         c.fillStyle = 'black';
         c.fillText(this.iconName, this.x + 10, this.y + 45)//TEMP TEMP TEMP//
@@ -79,6 +75,32 @@ class BuildingIcons {
     };
 
 };
+
+class UpgradeButton {
+    constructor(){
+        this.x = buttonPositionX;
+        this.y = buttonPositionY;
+        this.width = 70;
+        this.height = 20;
+        this.size = (this.width * 2) + (this.height * 2);
+        this.color = 'rgba(0,0,0,0.4)';
+        this.selectedStroke = 'red';
+        this.isSelected = false;
+        this.objectName = 'upgradeBtn';
+    };
+
+    drawBtn() {
+        c.lineWidth = 3;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.selectedStroke;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+        
+        c.font = '16px Arial';
+        c.fillStyle = 'black';
+        c.fillText('upgrade', this.x + 10, this.y + 45)//TEMP TEMP TEMP//
+    };
+}
 
 //copied to refactoring//
 class Cell {

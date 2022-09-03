@@ -82,6 +82,49 @@ placementTilesData2D.forEach((row, y) => {
     })
 });
 
+//~~~~~~~~~~~~~~~~~~~~~~~//
+//~~REUSABLE FUNCTIONS~~//
+//~~~~~~~~~~~~~~~~~~~~~~//
+
+function insertAt(array, index, ...elementsArray) {
+    array.splice(index, 0, ...elementsArray);
+};
+
+//~~function for detecting mouse collision for x and y variables~~//
+function collision(first, second){
+    if (first.x > second.x &&
+        first.x < second.x + second.width &&
+        first.y > second.y &&
+        first.y < second.y + second.height) {
+        return true;
+    };
+};
+
+//~~function for detecting mouse collision for position object (position = {x:x, y:y}~~//
+function collisionP(first, second){
+    if ( 
+        first.x > second.position.x && 
+        first.x < second.position.x + second.width &&
+        first.y > second.position.y && 
+        first.y < second.position.y + second.height
+    ) {
+        return true;
+    };
+};
+
+//~~~~~~~~~~SLEEP FUNCTION FOR DELAYING ACTIONS~~~~~~~~~~//
+//~~Example: [sleep(1000).then(() => clickCount = 0);]~~//
+//~~Example[2]: console.log("Check"); 
+//~~[2]: sleep(2000).then(() => { console.log("Mate!!!"); });
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  };
+
+//~~~~~~~~~~~~~//
+//~~FUNCTIONS~~//
+//~~~~~~~~~~~~~//
+
 //~~calculating grid (temporary for dev purposes)~~//
 function createGrid(){
     for (let y = 0; y < canvas.height; y += cellSize){
@@ -110,16 +153,6 @@ function spawnEnemies (enemyCount, enemyType, offSet) {
     }
 };
 
-//~~function for detecting mouse collision (deprecated, for now)~~//
-function collision(first, second){
-    if (    !(  first.x > second.x + second.width ||
-                first.x + first.width < second.x ||
-                first.y > second.y + second.height ||
-                first.y + first.height < second.y)
-    ) {
-        return true;
-    };
-};
 
 let gameState = 'running';
 
@@ -168,7 +201,7 @@ function placeTiles() {
     });
 };
 
-function abc() {
+function drawIcons() {
     iconArray.forEach((icon) => {
         icon.update(mouse);
     });
@@ -249,7 +282,7 @@ function createIcons() {
             new BuildingIcons(x, y, building)
         )  
     })
-    // console.log(iconArray[0]);
+    //console.log(iconArray[0]);
 };
 
 //~~Calling all functions for creating map, UI, and running game~~//
@@ -267,7 +300,8 @@ function animate() {
     removeEnemy();    // removes enemies if health === 0
     placeTiles();       //displays acceptable tile placement points  
     targetEnemy();   // handles targeting of 'basic' enemies
-    abc(); // Can't remember why it's called abc, or what it does. Future Kyler's problem.
+    drawIcons(); // Draws icons
+    drawUpgradeButtons();
 
 
 
@@ -301,6 +335,7 @@ canvas.addEventListener('mouseleave', function(){
     mouse.y = undefined;
 });
 
+let clickCount = 0;
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~BUILDING PLACEMENT FUNCTION~~//
@@ -308,7 +343,7 @@ canvas.addEventListener('mouseleave', function(){
 canvas.addEventListener('click', () => {
     if(activeTile && !activeTile.isOccupied && playerMoney > towerCost) {
         buildings.push(
-            new selectedTower({
+            new selectedIcon({
                 position: {
                     x: activeTile.position.x,
                     y: activeTile.position.y
@@ -317,13 +352,71 @@ canvas.addEventListener('click', () => {
         )
         activeTile.isOccupied = true;
         playerMoney -= towerCost;
+        moneyUpdate();
         console.log(buildings);
-        money.innerHTML = playerMoney;
+        clickCount = 1;
+        sleep(100).then(() => clickCount = 0);
     }
-
-    // console.log('towerCost = ' + towerCost);
-
 });
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~SELECT BUILDING FOR UPGRADE/SELL~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+let selectedTower;
+let buttonPositionX;
+let buttonPositionY;
+
+const upgradeButtonsArray = [];
+
+function drawUpgradeButtons() {
+    upgradeButtonsArray.forEach((btn) => {
+        if(btn.objectName === 'upgradeBtn'){
+            btn.drawBtn();
+        }
+    });
+};  
+
+window.addEventListener('click', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+    let btn;
+    let tower;
+    
+    for (let i = 0; i < buildings.length; i++) {
+        const building = buildings[i];
+         
+        if ( 
+            clickCount === 0 && collisionP(mouse, building)
+        ) {
+            buttonPositionX = building.position.x + 35;
+            buttonPositionY = building.position.y + 66;
+            upgradeButtonsArray[0] = new UpgradeButton;
+            upgradeButtonsArray[1] = building;
+            console.log(upgradeButtonsArray);
+            } 
+            btn = upgradeButtonsArray[0];
+            tower = upgradeButtonsArray[1];
+        if (mouse.x > btn.x &&
+            mouse.x < btn.x + btn.width &&
+            mouse.y > btn.y &&
+            mouse.y < btn.y + btn.height)
+        {
+            tower.towerLevel += 1;
+            tower.damage += 5;
+            tower.fireRadius += 50;
+            playerMoney = (playerMoney - 10000);
+            moneyUpdate();
+            console.log(tower.towerLevel);
+        }
+    } 
+        
+    console.log(upgradeButtonsArray);
+    console.log('x = ' + mouse.x);
+    console.log('y = ' + mouse.y);
+});
+
+
 
 money.innerHTML = ('MONEY: ' + playerMoney);
 lives.innerHTML = ('LIVES: ' + playerLives)
@@ -356,7 +449,7 @@ window.addEventListener('mousemove', (event) => {
 //~~~~SELECTED ICON INDICATOR~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-let selectedTower;
+let selectedIcon;
 
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
@@ -376,10 +469,9 @@ window.addEventListener('click', (e) => {
         if (mouseTracker && mouse.clicked){
         }
     };
-    selectedTower = activeIcon.towerType;
+    selectedIcon = activeIcon.towerType;
     isSelected();
-    // console.log('selectedTower = ' + selectedTower); 
-    
+    // console.log('selectedIcon = ' + selectedIcon); 
 });
 
 let activeTower;
@@ -393,9 +485,9 @@ canvas.addEventListener('click', (e) => {
         
         const mouseTracker = 
         mouse.x > tower.position.x &&
-        mouse.x < tower.position.x + tower.width &&
+        mouse.x < tower.position.x &&
         mouse.y > tower.position.y &&
-        mouse.y < tower.position.y + tower.height
+        mouse.y < tower.position.y
 
         if (mouseTracker){
             activeTower = tower;
@@ -410,7 +502,7 @@ canvas.addEventListener('click', (e) => {
 
 function isSelected() {
     iconArray.forEach(icon => {
-        if (icon.towerType === selectedTower) {
+        if (icon.towerType === selectedIcon) {
             icon.selectedStroke = 'black';
             chosenTower = icon.towerType;
             chosenBuilding = 1;
