@@ -41,6 +41,7 @@ class BuildingIcons {
         this.size = (this.width * 2) + (this.height * 2);
         this.towerType = building;
         this.iconName = iconName;
+        this.iconTowerType = iconTowerType;
         this.color = 'rgba(25, 255, 255, .2)';
         this.selectedStroke = 'orange';
         this.isSelected = false; 
@@ -76,17 +77,17 @@ class BuildingIcons {
 
 };
 
-class UpgradeButton {
-    constructor(){
+class UI {
+    constructor(width, height, buttonName){
         this.x = buttonPositionX;
         this.y = buttonPositionY;
-        this.width = 70;
-        this.height = 20;
+        this.width = width;
+        this.height = height;;
         this.size = (this.width * 2) + (this.height * 2);
         this.color = 'rgba(0,0,0,0.4)';
         this.selectedStroke = 'red';
         this.isSelected = false;
-        this.objectName = 'upgradeBtn';
+        this.buttonName = buttonName;
     };
 
     drawBtn() {
@@ -96,9 +97,38 @@ class UpgradeButton {
         c.strokeStyle = this.selectedStroke;
         c.strokeRect(this.x, this.y, this.width, this.height);
         
-        c.font = '16px Arial';
-        c.fillStyle = 'black';
-        c.fillText('upgrade', this.x + 10, this.y + 45)//TEMP TEMP TEMP//
+        c.lineWidth = 3;
+        c.fillStyle = 'blue';
+        c.fillRect(this.x, this.y + this.height + 3, this.width, this.height);
+        c.strokeStyle = 'yellow';
+        c.strokeRect(this.x, this.y + this.height + 3, this.width, this.height);
+
+        c.lineWidth = 3;
+        c.fillStyle = 'green';
+        c.fillRect(this.x, this.y + (this.height * 2) + 6, this.width, this.height);
+        c.strokeStyle = 'orange';
+        c.strokeRect(this.x, this.y + (this.height * 2) + 6, this.width, this.height);
+
+        c.font = '12px Arial';
+        c.fillStyle = 'white';
+        c.fillText('UPGRADE', this.x + 5, this.y + 14)
+        c.fillText('MOVE', this.x + 18, this.y + 38)
+        c.fillText('SELL', this.x + 18, this.y + 62)
+    };
+
+    drawContextMenu() {
+        c.lineWidth = 1;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.selectedStroke;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+
+        c.font = '12px Arial';
+        c.fillStyle = 'white';
+        c.fillText('First', this.x + 5, this.y + 15);
+        c.fillText('Last', this.x + 5, this.y + 30);
+        c.fillText('Most Health', this.x + 5, this.y + 45);
+        c.fillText('Least Health', this.x + 5, this.y + 60);
     };
 }
 
@@ -133,6 +163,9 @@ class Enemy {
             x: 0,
             y: 0
         };
+        this.targetedBy= [];
+        this.effectTimer = 0;
+
 
     };
 
@@ -158,13 +191,13 @@ class Enemy {
         const xDistance = waypoint.x - this.center.x;
         const angle = Math.atan2(yDistance, xDistance);
 
-        const speed = 1;
+        
 
         this.velocity.x = Math.cos(angle);
         this.velocity.y = Math.sin(angle);
         
-        this.position.x += this.velocity.x * speed;
-        this.position.y += this.velocity.y * speed;
+        this.position.x += this.velocity.x * this.speed;
+        this.position.y += this.velocity.y * this.speed;
         this.center = {
             x: this.position.x + this.width / 2,
             y: this.position.y + this.height /2
@@ -189,12 +222,11 @@ class Broker extends Enemy {
         this.radius = 30;
         this.health = 50;
         this.n = 50;
-        
         this.color = 'black';
-
         this.money = 50;
-    }
-}
+        this.speed = 1;
+    };
+};
 
 class HFManager extends Enemy {
     constructor({ position = {x: 0, y: 0}}) {
@@ -204,10 +236,10 @@ class HFManager extends Enemy {
         this.health = 100;
         this.n = 100;
         this.color = 'rgb(69, 26, 16)';
-
         this.money = 100;
-    }
-}
+        this.speed = .8;
+    };
+};
 
 
 
@@ -223,9 +255,9 @@ class Building {
         this.projectiles = [];
         this.target;
         this.frames = 0;
+        this.specialTimer = 0;
         this.chosenBuilding = chosenBuilding;
-        this.fireRate = 30; //lower number = higher fire rate
-        // this.radius = fireRadius;
+        this.radiusColor = 'rgba(255, 255, 255, .3)';
     };
 
 
@@ -235,21 +267,21 @@ class Building {
             
             c.beginPath();
             c.arc(this.center.x, this.center.y, this.fireRadius, 0, Math.PI * 2);
-            c.fillStyle = 'rgba(255, 255, 255, .3)';
+            c.fillStyle = this.radiusColor;
             c.fill();
             
             c.font = '12px Arial';
             c.fillStyle = 'black';
-            c.fillText(this.towerType, this.position.x + 40, this.position.y + 15)
+            c.fillText(this.towerType, this.position.x + 40, this.position.y + 15);
             
             c.font = '12px Arial';
             c.fillStyle = 'black';
-            c.fillText(('level: ' + this.towerLevel), this.position.x + 40, this.position.y + 30)
+            c.fillText(('level: ' + this.towerLevel), this.position.x + 40, this.position.y + 30);
 
             c.font = '12px Arial';
             c.fillStyle = 'black';
-            c.fillText(('damage: ' + this.damage), this.position.x + 40, this.position.y + 45)
-    }
+            c.fillText(('damage: ' + this.damage), this.position.x + 40, this.position.y + 45);
+    };
 
     // drawRadius() {
         
@@ -269,7 +301,7 @@ class Building {
             );
         }
         this.frames++
-    }
+    };
 
 };
 
@@ -285,15 +317,17 @@ class WaterTower extends Building {
         };
         this.target;
         this.frames = 0;
-
-
-        this.towerType = 'waterTower';
+        this.towerType = 'watertower';
+        this.special = 'slow enemy';
         this.towerLevel = 1;
         this.color = 'blue';
         this.fireRadius = 175;
-        this.damage = 20;
+        this.damage = .5;
         this.cost = 1500;
+        this.fireRate = 30; 
+        this.specialInterval = 3000;
     };
+
 };
 
 class FireTower extends Building {
@@ -306,17 +340,15 @@ class FireTower extends Building {
             x: this.position.x + this.width /2,
             y: this.position.y + this.height / 2
         };
-        
         this.target;
         this.frames = 0;
-
-
-        this.towerType = 'fireTower';
+        this.towerType = 'firetower';
         this.towerLevel = 1;
         this.color = 'red';
         this.fireRadius = 250;
         this.damage = 10;
         this.cost = 1000;
+        this.fireRate = 30;
     };
 };
 
@@ -330,17 +362,15 @@ class IceTower extends Building {
             x: this.position.x + this.width /2,
             y: this.position.y + this.height / 2
         };
-        
         this.target;
         this.frames = 0;
-
-
-        this.towerType = 'iceTower';
+        this.towerType = 'icetower';
         this.towerLevel = 1;
         this.color = 'purple';
         this.fireRadius = 225;
         this.damage = 10;
         this.cost = 1000;
+        this.fireRate = 30;
     };
 };
 
@@ -354,16 +384,15 @@ class WindTower extends Building {
             x: this.position.x + this.width /2,
             y: this.position.y + this.height / 2
         };
-        
         this.target;
         this.frames = 0;
-
-        this.towerType = 'windTower';
+        this.towerType = 'windtower';
         this.towerLevel = 1;
         this.color = 'white';
         this.fireRadius = 190;
         this.damage = 100;
         this.cost = 1000;
+        this.fireRate = 30;
     };
 };
 
@@ -376,10 +405,6 @@ class Projectile {
         };
         this.enemy = enemy;
         this.radius = 10;
-
-        //testing start//
-        this.chosenBuilding = chosenBuilding;
-        //testing stop//
     };
 
     draw() {
@@ -402,5 +427,18 @@ class Projectile {
 
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y
+    };
+};
+
+class RadiusFire extends Projectile {
+    constructor({position = {x: 0, y: 0, enemy}}){
+        super(Projectile);
+        this.position = position;
+        this.velocity = {
+            x: 0,
+            y: 0
+        };
+        this.enemy = enemy;
+        this.size = 10;
     };
 };

@@ -12,8 +12,7 @@
         <canvas></canvas>
         <div 
         id="game_over"
-        style="position: 
-                absolute; 
+        style="position: absolute; 
                 top: 0; 
                 bottom: 0; 
                 left:0; 
@@ -30,10 +29,15 @@
         </div>
     </div>
 
-<button id="next_round">NEXT ROUND</button>
+<p id="next_round"></p>
 <p id="game_over"></p>
 <p id="money"></p>
 <p id ="lives"></p>
+<label for="speed">SPEED:</label>
+<input type="text" id="speed" name="speed" required size="10" placeholder="1">
+<label for="black_enemy">Black Enemy Spawn Count:</label>
+<input type="text" id="black_enemy" name="black_enemy" required size="10">
+<label for="spawn_increase">Spawn_increase</label>
 
 <script src="js/placementTilesData"></script>
 <script src="js/waypointOne.js"></script>

@@ -14,6 +14,9 @@ let chosenTower;
 let towerCost;
 let playerMoney = 200000;
 let playerLives = 50;
+let radiusColor = 'rgba(255, 255, 255, 0.2)';
+
+lastTime = 0;
 
 zeroPos = {x: 0, y: 0};
 
@@ -38,6 +41,7 @@ const mouse = {
     width: 0.1,
     height: 0.1,
     clicked: false,
+    clicked2: false,
     hover: false,
 };
 
@@ -54,9 +58,12 @@ const gameGrid = [];
 const placementTilesData2D = [];
 const placementTiles = [];
 
+let upgradeButtonsArray = [];
+let contextMenuArray = [];
+
 //~~starts animation loop & loads map image~~//
 image.onload = () => {
-    animate();
+    animate(0);
 }
 image.src = 'img/newMap.png';
 
@@ -90,7 +97,7 @@ function insertAt(array, index, ...elementsArray) {
     array.splice(index, 0, ...elementsArray);
 };
 
-//~~function for detecting mouse collision for x and y variables~~//
+//~~function for detecting mouse collision with object in canvas using x and y variables~~//
 function collision(first, second){
     if (first.x > second.x &&
         first.x < second.x + second.width &&
@@ -100,7 +107,7 @@ function collision(first, second){
     };
 };
 
-//~~function for detecting mouse collision for position object (position = {x:x, y:y}~~//
+//~~function for detecting mouse collision with object in canvas using 'position object (position = {x:x, y:y}~~//
 function collisionP(first, second){
     if ( 
         first.x > second.position.x && 
@@ -112,9 +119,9 @@ function collisionP(first, second){
     };
 };
 
-//~~~~~~~~~~SLEEP FUNCTION FOR DELAYING ACTIONS~~~~~~~~~~//
-//~~Example: [sleep(1000).then(() => clickCount = 0);]~~//
-//~~Example[2]: console.log("Check"); 
+//~~~~~~~~~~SLEEP FUNCTION FOR DELAYING ACTIONS~~~~~~~~~~~//
+//~~Example: [sleep(1000).then(() => clickCount = 0);]~~~//
+//~~Example[2]: console.log("Check"); ~~~~~~~~~~~~~~~~~~~//
 //~~[2]: sleep(2000).then(() => { console.log("Mate!!!"); });
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 function sleep(ms) {
@@ -153,12 +160,10 @@ function spawnEnemies (enemyCount, enemyType, offSet) {
     }
 };
 
+let gameRunning = true;
+let roundStart = true;
 
-let gameState = 'running';
-
-const sortedEnemiesTest = [];
-
-let nextRound = document.getElementById('next_round');
+roundDelay();
 
 function removeEnemy() {
     for (let i = enemies.length -1; i >= 0; i--) {
@@ -173,27 +178,46 @@ function removeEnemy() {
         }
         if(playerLives === 0) {
             cancelAnimationFrame(animateId);
-            gameState = 'not running';
+            gameRunning = false;
             document.querySelector('#game_over').style.display = 'flex';
         }
     }
     if(enemies.length === 0) {
-        enemyCount = (enemyCount + 2);
-        brokerOffset = (brokerOffset- 2);
-        managerOffset = (managerOffset- 2);
-        // console.log('broker offset ' + brokerOffset);
+        round += 1; 
+        enemyCount += 2;
+        brokerOffset -= 2;
+        managerOffset -= 2;
+        console.log('ROUND: ' + round);
         spawnEnemies(enemyCount, stockBroker, brokerOffset);
         spawnEnemies(enemyCount, manager, managerOffset);
-        round += 1;
-        console.log('ROUND: ' + round);
-    }
-}
-
-function roundDelay() {
-    if(round > 1 && enemyCount === 0){
-        
+        roundDelay();
     }
 };
+let baseSpeed = 1;
+
+let speed = baseSpeed;
+
+//Made these while trying to get a counter to work,
+//but everything kept getting messed up. Stupid animate function...
+let nextRound = document.getElementById('next_round');
+let seconds = 20;
+
+//Hacky way to create a delay by slowing the speed of enemies,
+//while they're travelling from waypoint[0] -> [1],
+//which is off screen.
+
+//future me here. I'm pretty sure this functionality is built into the game loop via animate.
+//I can probably call something like animatePause() and animateResume() to pause the game loop.
+//past me was too lazy to read the docs. He's a jerk.
+
+function roundDelay() {
+    if(round > 1){
+        speed = .05;
+        sleep(20000).then(() => speed = 1);
+    }
+};
+
+
 
 function placeTiles() {
     placementTiles.forEach((tile) => {
@@ -207,21 +231,57 @@ function drawIcons() {
     });
 };  
 
+let sortedEnemiesTest = [];
+
+function sortEnemies() {
+    sortedEnemiesTest = enemies.sort((a, b) => {
+        return b.position.x - a.position.x;
+    });
+};
+
+
+function countSeconds(seconds) {
+    seconds -= 1;
+};
+
 function targetEnemy() {
 
     buildings.forEach((building) => {
         building.update();
         building.target = null;
         
-        const validEnemies = enemies.filter((enemy) => {
+        let validEnemies = sortedEnemiesTest.filter((enemy) => {
             const xDifference = enemy.center.x - building.center.x;
             const yDifference = enemy.center.y - building.center.y;
             const distance = Math.hypot(xDifference, yDifference);
             return distance < enemy.radius + building.fireRadius
         });
 
-        building.target = validEnemies[0];
+        let targetLast = validEnemies[validEnemies.length - 1];
+        let targetFirst = validEnemies[0];
+        // let targetLeasthealth = validEnemies.reduce((a, b) => {
+        //     return a.health < b.health ? a : b;
+        // });
+        // let targetMosthealth = validEnemies.reduce((a, b) => {
+        //     return a.health > b.health ? a : b;
+        // });
 
+        building.target = targetLast;
+
+        if (building.towerType === 'watertower') {
+            if (building.specialTimer > building.specialInterval) {
+                validEnemies.forEach((enemy) => {
+                    building.radiusColor = 'rgba(1, 255, 255, 0.5)';
+                    sleep(500).then(() => building.radiusColor = 'rgba(255, 255, 255, .3)');
+                    enemy.speed = .5;
+                    building.specialTimer = 0;
+                    sleep(6000).then(() => enemy.speed = 1);
+                });
+            } else {
+                building.specialTimer += deltaTime;
+            }
+        }
+    
         for (let i = building.projectiles.length -1; i>= 0; i--) {
             const projectile = building.projectiles[i];
             projectile.update();
@@ -230,10 +290,9 @@ function targetEnemy() {
             const yDifference = projectile.enemy.center.y - projectile.position.y;
             const distance = Math.hypot(xDifference, yDifference);
 
-            // projectile collision with enemy
+          
             if (distance < projectile.enemy.radius + projectile.radius) {
-                //enemy health calculation
-                // console.log(building.fireRadius);
+                
                 projectile.enemy.health -= building.damage;
                 if (projectile.enemy.health <= 0) {
                     const enemyIndex = enemies.findIndex((enemy) => {
@@ -244,12 +303,12 @@ function targetEnemy() {
                     
                     if (enemyIndex > -1) enemies.splice(enemyIndex, 1);
                 }
-                // console.log(projectile.enemy.health);
                 building.projectiles.splice(i, 1);
             }
         }
     })
 }
+
 
 const iconArray = [];
 const fireTower = new FireTower(zeroPos);
@@ -259,6 +318,7 @@ const windTower = new WindTower(zeroPos);
 
 let buildingIconArray = [FireTower, WaterTower, IceTower, WindTower];
 let iconName;
+let iconTowerType;
 
 function createIcons() {
     buildingIconArray.forEach((building) => {
@@ -268,15 +328,22 @@ function createIcons() {
         if(building === FireTower){
             x = 900;
             iconName = 'FIRE';
+            iconTowerType = 'firetower';
         } else if (building === WaterTower){
             x = 990;
             iconName = 'WATER';
+            iconTowerType = 'watertower';
+
         } else if (building === IceTower){
             x = 1080;
             iconName = 'ICE';
+            iconTowerType = 'icetower';
+
         } else if (building === WindTower){
             x = 1170;
             iconName = 'WIND';
+            iconTowerType = 'windtower';
+
         }
         iconArray.push(
             new BuildingIcons(x, y, building)
@@ -292,8 +359,24 @@ function createIcons() {
 createGrid();
 createIcons();
 
-function animate() {
+
+//deltaTime...I spent a week trying to figure out how to run
+//certain functions at an interval, but the way the gameloop
+//works doens't allow for setTimeout or setInterval to work.
+//I crashed my browser more than a few times in my vain attempts.
+//Come to find out, I just needed to use deltaTime.
+//Should have read the docs more carefully...
+
+
+let deltaTime;
+
+function animate(timeStamp) {
+
+    deltaTime = timeStamp - lastTime;
+    lastTime = timeStamp;
+
     animateId = requestAnimationFrame(animate);
+    sortEnemies();
     //available function under window.requestAnimationFrame
     c.drawImage(image, 0, 0);
     handleGameGrid();   // creates grid layover for testing and dev purposes
@@ -301,10 +384,7 @@ function animate() {
     placeTiles();       //displays acceptable tile placement points  
     targetEnemy();   // handles targeting of 'basic' enemies
     drawIcons(); // Draws icons
-    drawUpgradeButtons();
-
-
-
+    drawUIs();
 };
 
 
@@ -337,10 +417,69 @@ canvas.addEventListener('mouseleave', function(){
 
 let clickCount = 0;
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~BUILDING PLACEMENT FUNCTION~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-canvas.addEventListener('click', () => {
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~RIGHT CLICK BUILDING TO CHOOSE TARGETING ORDER~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+canvas.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    mouse.clicked2 = true;
+    
+    for (let i = 0; i < buildings.length; i++) {
+        const building = buildings[i];
+
+        buttonPositionX = building.position.x;
+        buttonPositionY = building.position.y + building.height;
+
+        //Detecting collison with building
+        //and displaying targeting buttons
+        //then allowing 4 seconds to choose
+        //because I'm not smart enough to figure
+        //out how to only display only while mouse within x,y
+        //maybe future me can...god speed future me, you sucker
+
+        if (collisionP(mouse, building)) {
+            contextMenuArray[0] = new UI(building.width, building.height);
+            sleep(4000).then(() => contextMenuArray.splice(0, 1));
+            
+        } 
+    }
+
+});
+
+
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~SELECT BUILDING FOR UPGRADE/SELL~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+let selectedTower;
+let buttonPositionX  = 0;
+let buttonPositionY = 0;
+
+
+function drawUIs() {
+    upgradeButtonsArray.forEach((btn) => {
+        if(btn.buttonName === 'upgradeBtn'){
+            btn.drawBtn();
+        }
+    });
+
+    contextMenuArray.forEach((menu) => {
+        if(btn.buttonName === 'upgradeBtn'){
+            menu.drawContextMenu();
+        }
+    })
+};  
+
+let btn = new UI; //this is temporarily(?) handling an error with btn being undefined
+let moveBtn = new UI;
+let tower = null;
+
+window.addEventListener('click', (event) => {
+    //~~BUILDING PLACEMENT FUNCTION~~//
     if(activeTile && !activeTile.isOccupied && playerMoney > towerCost) {
         buildings.push(
             new selectedIcon({
@@ -349,71 +488,59 @@ canvas.addEventListener('click', () => {
                     y: activeTile.position.y
                 }
             })
-        )
+        );
         activeTile.isOccupied = true;
         playerMoney -= towerCost;
         moneyUpdate();
         console.log(buildings);
         clickCount = 1;
         sleep(100).then(() => clickCount = 0);
-    }
-});
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~SELECT BUILDING FOR UPGRADE/SELL~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
-let selectedTower;
-let buttonPositionX;
-let buttonPositionY;
-
-const upgradeButtonsArray = [];
-
-function drawUpgradeButtons() {
-    upgradeButtonsArray.forEach((btn) => {
-        if(btn.objectName === 'upgradeBtn'){
-            btn.drawBtn();
-        }
-    });
-};  
-
-window.addEventListener('click', (event) => {
+    };
+    //~~CREATE UPGRADE TOWERS BUTTON~~//
     mouse.x = event.clientX;
     mouse.y = event.clientY;
-    let btn;
-    let tower;
     
+
     for (let i = 0; i < buildings.length; i++) {
         const building = buildings[i];
+        let width;
+        let height;
          
-        if ( 
-            clickCount === 0 && collisionP(mouse, building)
-        ) {
-            buttonPositionX = building.position.x + 35;
-            buttonPositionY = building.position.y + 66;
-            upgradeButtonsArray[0] = new UpgradeButton;
-            upgradeButtonsArray[1] = building;
+        if (clickCount === 0 && collisionP(mouse, building)) {
+
+            //~~MATCHES TOWER WITH ICON~~//
+            iconArray.forEach(icon => {
+                if (icon.iconTowerType === building.towerType) {
+                    buttonPositionX = icon.x;
+                    buttonPositionY = icon.y + 88;
+                    width = icon.width;
+                    height = icon.height / 4;
+                };
+            });
+            upgradeButtonsArray[0] = new UI(width, height, 'upgradeBtn');
+            upgradeButtonsArray[1] = new UI(width, height, 'moveBtn');
+            upgradeButtonsArray[2] = new UI(width, height, 'sellBtn');
+            upgradeButtonsArray[3] = building;
             console.log(upgradeButtonsArray);
-            } 
             btn = upgradeButtonsArray[0];
-            tower = upgradeButtonsArray[1];
-        if (mouse.x > btn.x &&
-            mouse.x < btn.x + btn.width &&
-            mouse.y > btn.y &&
-            mouse.y < btn.y + btn.height)
-        {
+            moveBtn = upgradeButtonsArray[1];
+            sleep(5000).then(() => upgradeButtonsArray.splice(0));
+            } 
+            tower = upgradeButtonsArray[3];
+            //~~HANDLES UPGRADE BUTTON, ONCLICK~~//
+            if (collision(mouse, btn)) {
             tower.towerLevel += 1;
             tower.damage += 5;
             tower.fireRadius += 50;
             playerMoney = (playerMoney - 10000);
+            tower = null;
             moneyUpdate();
-            console.log(tower.towerLevel);
-        }
+            upgradeButtonsArray.splice(0);
+            if (collision(mouse, moveBtn)){
+                console.log('btn 2');
+            }
+        } 
     } 
-        
-    console.log(upgradeButtonsArray);
-    console.log('x = ' + mouse.x);
-    console.log('y = ' + mouse.y);
 });
 
 
@@ -454,6 +581,7 @@ let selectedIcon;
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
+    
 
     for (let i = 0; i < iconArray.length; i++) {
         const icon = iconArray[i];
@@ -470,8 +598,16 @@ window.addEventListener('click', (e) => {
         }
     };
     selectedIcon = activeIcon.towerType;
-    isSelected();
-    // console.log('selectedIcon = ' + selectedIcon); 
+    iconArray.forEach(icon => {
+        if (icon.towerType === selectedIcon) {
+            icon.selectedStroke = 'black';
+            chosenTower = icon.towerType;
+            chosenBuilding = 1;
+            towerCost = waterTower.cost;
+        } else {
+            icon.selectedStroke = 'orange';
+        }
+    });
 });
 
 let activeTower;
@@ -494,25 +630,24 @@ canvas.addEventListener('click', (e) => {
         }
         if (mouseTracker && mouse.clicked){
         }
-    //console.log(activeTower.towerType)
     };
-
-    //console.log(activeTower);
 });
 
-function isSelected() {
-    iconArray.forEach(icon => {
-        if (icon.towerType === selectedIcon) {
-            icon.selectedStroke = 'black';
-            chosenTower = icon.towerType;
-            chosenBuilding = 1;
-            towerCost = waterTower.cost;
-        } else {
-            icon.selectedStroke = 'orange';
-        }
-    });
-    // console.log(chosenTower);
-};
+//~~deprecated for now, no need for a function of it's own...I think~~//
+
+// function isSelected() {
+//     iconArray.forEach(icon => {
+//         if (icon.towerType === selectedIcon) {
+//             icon.selectedStroke = 'black';
+//             chosenTower = icon.towerType;
+//             chosenBuilding = 1;
+//             towerCost = waterTower.cost;
+//         } else {
+//             icon.selectedStroke = 'orange';
+//         }
+//     });
+// };
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//
