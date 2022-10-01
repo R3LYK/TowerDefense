@@ -1,4 +1,3 @@
-//copied to refactoring//
 
 class PlacementTile {
     constructor({position = {x: 0, y: 0}}) {
@@ -32,7 +31,58 @@ class PlacementTile {
     };
 };
 
-class BuildingIcons {
+class UI {
+    constructor(width, height, buttonName, buttonPositionX, buttonPositionY) {
+        this.x = buttonPositionX;
+        this.y = buttonPositionY;
+        this.width = width;
+        this.height = height;
+        this.size = (this.width * 2) + (this.height * 2);
+        this.color = 'rgba(0,0,0,0.4)';
+        this.selectedStroke = 'red';
+        this.isSelected = false;
+        this.buttonName = buttonName;
+    };
+
+    //it is more effecient to render objects using a method
+    //and passing in the object as a parameter
+    //as opposed to having to write each c.xxxxx for every object
+    //you want to render
+    //will need to refactor quite a bit of code to implement this
+    //but it *should* be more effecient in the long run
+
+    //~~THIS IS DONE CORRECTLY~~//
+    drawBtn() {
+       
+        c.lineWidth = 3;
+        c.fillStyle = 'green';
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = 'orange';
+        c.strokeRect(this.x, this.y, this.width, this.height);
+
+        c.font = '12px Arial';
+        c.fillStyle = 'white';
+        c.fillText(this.buttonName.toUpperCase(), this.x + (this.width / 8), this.y + (this.height / 2) + 4);
+    };
+
+    //~~THIS IS DONE POORLY~~//
+    drawContextMenu() {
+        c.lineWidth = 1;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.selectedStroke;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+
+        c.font = '12px Arial';
+        c.fillStyle = 'white';
+        c.fillText('First', this.x + 5, this.y + 15);
+        c.fillText('Last', this.x + 5, this.y + 30);
+        c.fillText('Most Health', this.x + 5, this.y + 45);
+        c.fillText('Least Health', this.x + 5, this.y + 60);
+    };
+}
+
+class BuildingIcons{
     constructor(x, y, building){
         this.x = x;
         this.y = y;
@@ -77,62 +127,6 @@ class BuildingIcons {
 
 };
 
-class UI {
-    constructor(width, height, buttonName){
-        this.x = buttonPositionX;
-        this.y = buttonPositionY;
-        this.width = width;
-        this.height = height;;
-        this.size = (this.width * 2) + (this.height * 2);
-        this.color = 'rgba(0,0,0,0.4)';
-        this.selectedStroke = 'red';
-        this.isSelected = false;
-        this.buttonName = buttonName;
-    };
-
-    drawBtn() {
-        c.lineWidth = 3;
-        c.fillStyle = this.color;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = this.selectedStroke;
-        c.strokeRect(this.x, this.y, this.width, this.height);
-        
-        c.lineWidth = 3;
-        c.fillStyle = 'blue';
-        c.fillRect(this.x, this.y + this.height + 3, this.width, this.height);
-        c.strokeStyle = 'yellow';
-        c.strokeRect(this.x, this.y + this.height + 3, this.width, this.height);
-
-        c.lineWidth = 3;
-        c.fillStyle = 'green';
-        c.fillRect(this.x, this.y + (this.height * 2) + 6, this.width, this.height);
-        c.strokeStyle = 'orange';
-        c.strokeRect(this.x, this.y + (this.height * 2) + 6, this.width, this.height);
-
-        c.font = '12px Arial';
-        c.fillStyle = 'white';
-        c.fillText('UPGRADE', this.x + 5, this.y + 14)
-        c.fillText('MOVE', this.x + 18, this.y + 38)
-        c.fillText('SELL', this.x + 18, this.y + 62)
-    };
-
-    drawContextMenu() {
-        c.lineWidth = 1;
-        c.fillStyle = this.color;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = this.selectedStroke;
-        c.strokeRect(this.x, this.y, this.width, this.height);
-
-        c.font = '12px Arial';
-        c.fillStyle = 'white';
-        c.fillText('First', this.x + 5, this.y + 15);
-        c.fillText('Last', this.x + 5, this.y + 30);
-        c.fillText('Most Health', this.x + 5, this.y + 45);
-        c.fillText('Least Health', this.x + 5, this.y + 60);
-    };
-}
-
-//copied to refactoring//
 class Cell {
     constructor(x, y){
         this.x = x;
@@ -147,7 +141,6 @@ class Cell {
         c.strokeRect(this.x, this.y, this.width, this.height);
     };
 };
-
 
 class Enemy {
     constructor({ position = {x: 0, y: 0}}) {
@@ -241,8 +234,6 @@ class HFManager extends Enemy {
     };
 };
 
-
-
 class Building {
     constructor({position = {x: 0, y: 0}}) {
         this.position = position;
@@ -282,10 +273,6 @@ class Building {
             c.fillStyle = 'black';
             c.fillText(('damage: ' + this.damage), this.position.x + 40, this.position.y + 45);
     };
-
-    // drawRadius() {
-        
-    // };
 
     update() {
         this.draw();

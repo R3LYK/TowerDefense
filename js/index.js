@@ -275,7 +275,7 @@ function targetEnemy() {
                     sleep(500).then(() => building.radiusColor = 'rgba(255, 255, 255, .3)');
                     enemy.speed = .5;
                     building.specialTimer = 0;
-                    sleep(6000).then(() => enemy.speed = 1);
+                    sleep(6000).then(() => enemy.speed = baseSpeed);
                 });
             } else {
                 building.specialTimer += deltaTime;
@@ -430,6 +430,7 @@ canvas.addEventListener('contextmenu', function(e){
 
         buttonPositionX = building.position.x;
         buttonPositionY = building.position.y + building.height;
+        let buttonName = 'contextMenu';
 
         //Detecting collison with building
         //and displaying targeting buttons
@@ -439,7 +440,7 @@ canvas.addEventListener('contextmenu', function(e){
         //maybe future me can...god speed future me, you sucker
 
         if (collisionP(mouse, building)) {
-            contextMenuArray[0] = new UI(building.width, building.height);
+            contextMenuArray[0] = new UI(building.width, building.height, buttonName, buttonPositionX, buttonPositionY);
             sleep(4000).then(() => contextMenuArray.splice(0, 1));
             
         } 
@@ -459,24 +460,54 @@ let selectedTower;
 let buttonPositionX  = 0;
 let buttonPositionY = 0;
 
+//this function is always running in the animate loop
+//so special precautions are needed to prevent
+//calling a method on an undefined object
 
 function drawUIs() {
-    upgradeButtonsArray.forEach((btn) => {
-        if(btn.buttonName === 'upgradeBtn'){
-            btn.drawBtn();
+
+    //looping through upgradeButtonsArray and calling UI method drawBtn() 
+    //to create and render the buttons. Works with the 'event listener' below
+
+    for (let i = 0; i < upgradeButtonsArray.length; i++) {
+        const ub = upgradeButtonsArray[i];
+
+        if(ub.buttonName === 'upgrade'){
+            ub.drawBtn();
+        } else if (ub.buttonName === 'move'){
+            ub.drawBtn();
+        } else if (ub.buttonName === 'sell'){
+            ub.drawBtn();
         }
-    });
+        
+    }
+
+    //this needs refactored once I get around to the context menu
+    //the solution above for buttons is much cleaner, and will
+    //be easier to add more functionality later without rewriting
+    //you're welcome future me
 
     contextMenuArray.forEach((menu) => {
         if(btn.buttonName === 'upgradeBtn'){
             menu.drawContextMenu();
         }
     })
+    
 };  
 
-let btn = new UI; //this is temporarily(?) handling an error with btn being undefined
+function moveTower() {
+    
+}
+
+
+
+let btn = new UI; //this is temporarily(lol) handling an error with btn being undefined
 let moveBtn = new UI;
 let tower = null;
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~EVENT LISTENER FOR MOST BUTTONS~~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 window.addEventListener('click', (event) => {
     //~~BUILDING PLACEMENT FUNCTION~~//
@@ -492,7 +523,6 @@ window.addEventListener('click', (event) => {
         activeTile.isOccupied = true;
         playerMoney -= towerCost;
         moneyUpdate();
-        console.log(buildings);
         clickCount = 1;
         sleep(100).then(() => clickCount = 0);
     };
@@ -505,41 +535,60 @@ window.addEventListener('click', (event) => {
         const building = buildings[i];
         let width;
         let height;
+        let removeBtn = () => upgradeButtonsArray.splice(0);
+
+        //~~NEED TO ADD CLICKCOUNT TO REMOVE BUTTON
+        //~~BECASUE RIGHT NOW, IF YOU CLICK A BUILDING MULTIPLE TIMES
+        //~~THE TIMER STARTS RUNNING MULTIPLE TIMES AND CAUSES
+        //~~THE BUTTONS TO DISAPPEAR BEFORE YOU CAN CLICK THEM
          
         if (clickCount === 0 && collisionP(mouse, building)) {
 
             //~~MATCHES TOWER WITH ICON~~//
             iconArray.forEach(icon => {
                 if (icon.iconTowerType === building.towerType) {
-                    buttonPositionX = icon.x;
-                    buttonPositionY = icon.y + 88;
                     width = icon.width;
                     height = icon.height / 4;
+                    buttonPositionX = icon.x;
+                    buttonPositionY = icon.y + (height * 4) + 3;
                 };
             });
-            upgradeButtonsArray[0] = new UI(width, height, 'upgradeBtn');
-            upgradeButtonsArray[1] = new UI(width, height, 'moveBtn');
-            upgradeButtonsArray[2] = new UI(width, height, 'sellBtn');
-            upgradeButtonsArray[3] = building;
-            console.log(upgradeButtonsArray);
-            btn = upgradeButtonsArray[0];
-            moveBtn = upgradeButtonsArray[1];
-            sleep(5000).then(() => upgradeButtonsArray.splice(0));
+
+            let cardbuttons = ['upgrade', 'move', 'sell'];
+
+            //populate upgradeButtonsArray
+            //this is where the information for drawUIs() is coming from [line: 467]
+            cardbuttons.forEach((button) => {
+                upgradeButtonsArray.push(
+                    new UI(width, height, button, buttonPositionX, buttonPositionY)
+                );
+                //increase buttonPositionY by height
+                buttonPositionY = buttonPositionY + height;
+            });
+
+            upgradeButtonsArray.push(building);
+
+            sleep(6000).then(() => removeBtn());
             } 
+            
             tower = upgradeButtonsArray[3];
             //~~HANDLES UPGRADE BUTTON, ONCLICK~~//
-            if (collision(mouse, btn)) {
+            if (collision(mouse, upgradeButtonsArray[0])) {
             tower.towerLevel += 1;
             tower.damage += 5;
             tower.fireRadius += 50;
             playerMoney = (playerMoney - 10000);
             tower = null;
             moneyUpdate();
-            upgradeButtonsArray.splice(0);
-            if (collision(mouse, moveBtn)){
-                console.log('btn 2');
-            }
-        } 
+            removeBtn();
+        } else if (collision(mouse, upgradeButtonsArray[1])) {
+            console.log('move');
+            removeBtn();
+            console.log(upgradeButtonsArray);
+        } else if (collision(mouse, upgradeButtonsArray[2])) {
+            console.log('sell');
+            removeBtn();
+        }
     } 
 });
 
