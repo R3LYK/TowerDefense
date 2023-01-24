@@ -42,20 +42,17 @@ class UI {
         this.selectedStroke = 'red';
         this.isSelected = false;
         this.buttonName = buttonName;
+        this.lifespan = 0;
+        this.deleteSelf = 3000;
+        this.buttonFill = 'green';
     };
-
-    //it is more effecient to render objects using a method
-    //and passing in the object as a parameter
-    //as opposed to having to write each c.xxxxx for every object
-    //you want to render
-    //will need to refactor quite a bit of code to implement this
-    //but it *should* be more effecient in the long run
-
     //~~THIS IS DONE CORRECTLY~~//
+    //This *should* be able to made reusable for all buttons.
+    //Future me, figure it out!!!
     drawBtn() {
        
         c.lineWidth = 3;
-        c.fillStyle = 'green';
+        c.fillStyle = this.buttonFill;
         c.fillRect(this.x, this.y, this.width, this.height);
         c.strokeStyle = 'orange';
         c.strokeRect(this.x, this.y, this.width, this.height);
@@ -63,7 +60,35 @@ class UI {
         c.font = '12px Arial';
         c.fillStyle = 'white';
         c.fillText(this.buttonName.toUpperCase(), this.x + (this.width / 8), this.y + (this.height / 2) + 4);
+        this.lifespan += deltaTime;
+
+        for (let i = 0; i < upgradeButtonsArray.length; i++) {
+            const ub = upgradeButtonsArray[i];
+    
+            if(ub.lifespan > ub.deleteSelf) {
+            upgradeButtonsArray.splice(i, 1);
+            clickCount = 0;
+
+            }; 
+        };
     };
+
+    update(mouse) {
+        // this.drawButton()
+        const mouseDetection = (
+            mouse.x > this.x && 
+            mouse.x < this.x + this.width &&
+            mouse.y > this.y && 
+            mouse.y < this.y + this.height)
+
+        if  (mouseDetection){
+            this.color = 'rgba(25, 255, 255, .4)';
+            this.buttonFill = 'red';
+        } else {
+            this.color = 'rgba(25, 255, 255, .2)';
+            this.buttonFill = 'green';
+        }
+    }
 
     //~~THIS IS DONE POORLY~~//
     drawContextMenu() {
@@ -72,6 +97,7 @@ class UI {
         c.fillRect(this.x, this.y, this.width, this.height);
         c.strokeStyle = this.selectedStroke;
         c.strokeRect(this.x, this.y, this.width, this.height);
+        
 
         c.font = '12px Arial';
         c.fillStyle = 'white';
@@ -79,9 +105,21 @@ class UI {
         c.fillText('Last', this.x + 5, this.y + 30);
         c.fillText('Most Health', this.x + 5, this.y + 45);
         c.fillText('Least Health', this.x + 5, this.y + 60);
-    };
-}
+    };  
 
+    drawIcon(){
+        c.lineWidth = 3;
+        c.fillStyle = this.color;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.selectedStroke;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+        
+        c.font = '16px Arial';
+        c.fillStyle = 'black';
+        c.fillText(this.iconName, this.x + 10, this.y + 45)//TEMP TEMP TEMP//
+    }
+}
+//This needs merged into UI...eventually
 class BuildingIcons{
     constructor(x, y, building){
         this.x = x;

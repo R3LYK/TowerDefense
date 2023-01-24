@@ -218,18 +218,11 @@ function roundDelay() {
 };
 
 
-
 function placeTiles() {
     placementTiles.forEach((tile) => {
         tile.update(mouse);
     });
 };
-
-function drawIcons() {
-    iconArray.forEach((icon) => {
-        icon.update(mouse);
-    });
-};  
 
 let sortedEnemiesTest = [];
 
@@ -259,12 +252,6 @@ function targetEnemy() {
 
         let targetLast = validEnemies[validEnemies.length - 1];
         let targetFirst = validEnemies[0];
-        // let targetLeasthealth = validEnemies.reduce((a, b) => {
-        //     return a.health < b.health ? a : b;
-        // });
-        // let targetMosthealth = validEnemies.reduce((a, b) => {
-        //     return a.health > b.health ? a : b;
-        // });
 
         building.target = targetLast;
 
@@ -317,8 +304,50 @@ const iceTower = new IceTower(zeroPos);
 const windTower = new WindTower(zeroPos);
 
 let buildingIconArray = [FireTower, WaterTower, IceTower, WindTower];
+
+let icons2 = [
+    {
+    iconBuilding: FireTower,
+    x: 900,
+    y:  10,
+    width: 70,
+    height: 85
+    },
+    {
+    iconBuilding: WaterTower,
+    x: 990,
+    y: 10,
+    width: 70,
+    height: 85
+    },
+    {
+    iconBuilding: IceTower,
+    x: 1080,
+    y: 10,
+    width: 70,
+    height: 85
+    },
+    {
+    iconBuilding: WindTower,
+    x: 1170,
+    y: 10,
+    width: 70,
+    height: 85
+    }
+
+]
+
+function makeIconsGreatAgain() {
+
+    icons2.forEach((icon) => {
+        icon.push
+        new UI (icons2.width, icons2.height, icons2.iconBuilding, icons2.x, icons2.y)
+    })
+}
+
 let iconName;
 let iconTowerType;
+const tempArray = [];
 
 function createIcons() {
     buildingIconArray.forEach((building) => {
@@ -359,15 +388,6 @@ function createIcons() {
 createGrid();
 createIcons();
 
-
-//deltaTime...I spent a week trying to figure out how to run
-//certain functions at an interval, but the way the gameloop
-//works doens't allow for setTimeout or setInterval to work.
-//I crashed my browser more than a few times in my vain attempts.
-//Come to find out, I just needed to use deltaTime.
-//Should have read the docs more carefully...
-
-
 let deltaTime;
 
 function animate(timeStamp) {
@@ -385,6 +405,9 @@ function animate(timeStamp) {
     targetEnemy();   // handles targeting of 'basic' enemies
     drawIcons(); // Draws icons
     drawUIs();
+
+
+    makeIconsGreatAgain();
 };
 
 
@@ -448,10 +471,6 @@ canvas.addEventListener('contextmenu', function(e){
 
 });
 
-
-
-
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~SELECT BUILDING FOR UPGRADE/SELL~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -460,9 +479,27 @@ let selectedTower;
 let buttonPositionX  = 0;
 let buttonPositionY = 0;
 
-//this function is always running in the animate loop
+//these functions are always running in the animate loop
 //so special precautions are needed to prevent
 //calling a method on an undefined object
+
+let md;
+
+function drawIcons() {
+    iconArray.forEach((icon) => {
+        icon.update(mouse);
+    });
+
+    upgradeButtonsArray.forEach((btn) => {
+        btn.update(mouse);
+    })
+};  
+
+function drawContextMenu() {
+    contextMenuArray.forEach((contextMenu) => {
+        // PLACEHOLDER___contextMenu.update(mouse);
+    });
+};
 
 function drawUIs() {
 
@@ -472,15 +509,20 @@ function drawUIs() {
     for (let i = 0; i < upgradeButtonsArray.length; i++) {
         const ub = upgradeButtonsArray[i];
 
-        if(ub.buttonName === 'upgrade'){
-            ub.drawBtn();
-        } else if (ub.buttonName === 'move'){
-            ub.drawBtn();
-        } else if (ub.buttonName === 'sell'){
+        const mouseTracker = 
+        mouse.x > ub.x &&
+        mouse.x < ub.x + ub.width + 8 &&
+        mouse.y > ub.y &&
+        mouse.y < ub.y + ub.height + 8
+
+        if(ub.buttonName === 'upgrade' || 
+            ub.buttonName == 'move' || 
+            ub.buttonName == 'sell'){
             ub.drawBtn();
         }
-        
     }
+
+    
 
     //this needs refactored once I get around to the context menu
     //the solution above for buttons is much cleaner, and will
@@ -495,10 +537,6 @@ function drawUIs() {
     
 };  
 
-function moveTower() {
-    
-}
-
 
 
 let btn = new UI; //this is temporarily(lol) handling an error with btn being undefined
@@ -508,6 +546,8 @@ let tower = null;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~EVENT LISTENER FOR MOST BUTTONS~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+
 
 window.addEventListener('click', (event) => {
     //~~BUILDING PLACEMENT FUNCTION~~//
@@ -520,79 +560,14 @@ window.addEventListener('click', (event) => {
                 }
             })
         );
+        //console.log(buildings);
         activeTile.isOccupied = true;
         playerMoney -= towerCost;
         moneyUpdate();
         clickCount = 1;
         sleep(100).then(() => clickCount = 0);
     };
-    //~~CREATE UPGRADE TOWERS BUTTON~~//
-    mouse.x = event.clientX;
-    mouse.y = event.clientY;
-    
-
-    for (let i = 0; i < buildings.length; i++) {
-        const building = buildings[i];
-        let width;
-        let height;
-        let removeBtn = () => upgradeButtonsArray.splice(0);
-
-        //~~NEED TO ADD CLICKCOUNT TO REMOVE BUTTON
-        //~~BECASUE RIGHT NOW, IF YOU CLICK A BUILDING MULTIPLE TIMES
-        //~~THE TIMER STARTS RUNNING MULTIPLE TIMES AND CAUSES
-        //~~THE BUTTONS TO DISAPPEAR BEFORE YOU CAN CLICK THEM
-         
-        if (clickCount === 0 && collisionP(mouse, building)) {
-
-            //~~MATCHES TOWER WITH ICON~~//
-            iconArray.forEach(icon => {
-                if (icon.iconTowerType === building.towerType) {
-                    width = icon.width;
-                    height = icon.height / 4;
-                    buttonPositionX = icon.x;
-                    buttonPositionY = icon.y + (height * 4) + 3;
-                };
-            });
-
-            let cardbuttons = ['upgrade', 'move', 'sell'];
-
-            //populate upgradeButtonsArray
-            //this is where the information for drawUIs() is coming from [line: 467]
-            cardbuttons.forEach((button) => {
-                upgradeButtonsArray.push(
-                    new UI(width, height, button, buttonPositionX, buttonPositionY)
-                );
-                //increase buttonPositionY by height
-                buttonPositionY = buttonPositionY + height;
-            });
-
-            upgradeButtonsArray.push(building);
-
-            sleep(6000).then(() => removeBtn());
-            } 
-            
-            tower = upgradeButtonsArray[3];
-            //~~HANDLES UPGRADE BUTTON, ONCLICK~~//
-            if (collision(mouse, upgradeButtonsArray[0])) {
-            tower.towerLevel += 1;
-            tower.damage += 5;
-            tower.fireRadius += 50;
-            playerMoney = (playerMoney - 10000);
-            tower = null;
-            moneyUpdate();
-            removeBtn();
-        } else if (collision(mouse, upgradeButtonsArray[1])) {
-            console.log('move');
-            removeBtn();
-            console.log(upgradeButtonsArray);
-        } else if (collision(mouse, upgradeButtonsArray[2])) {
-            console.log('sell');
-            removeBtn();
-        }
-    } 
 });
-
-
 
 money.innerHTML = ('MONEY: ' + playerMoney);
 lives.innerHTML = ('LIVES: ' + playerLives)
@@ -634,7 +609,8 @@ window.addEventListener('click', (e) => {
 
     for (let i = 0; i < iconArray.length; i++) {
         const icon = iconArray[i];
-        const mouseTracker = mouse.x > icon.x &&
+        const mouseTracker = 
+        mouse.x > icon.x &&
         mouse.x < icon.x + icon.width + 8 &&
         mouse.y > icon.y &&
         mouse.y < icon.y + icon.height + 8
@@ -659,43 +635,66 @@ window.addEventListener('click', (e) => {
     });
 });
 
-let activeTower;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~~~UPGRADE MENU CREATION ONCLICK~~~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-canvas.addEventListener('click', (e) => {
+let lifespan;
+
+window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
 
-    for (let i = 0; i < buildings.length; i++) {
-        const tower = buildings[i];
-        
-        const mouseTracker = 
-        mouse.x > tower.position.x &&
-        mouse.x < tower.position.x &&
-        mouse.y > tower.position.y &&
-        mouse.y < tower.position.y
+    if(clickCount === 0){
+        console.log(upgradeButtonsArray);
+        clickCount = 1;
+        for (let i = 0; i < buildings.length; i++) {
+            const building = buildings[i];
+            
+            const mouseTracker = 
+            mouse.x > building.position.x &&
+            mouse.x < building.position.x + building.width + 8 &&
+            mouse.y > building.position.y &&
+            mouse.y < building.position.y + building.height + 8
+            
+            if (mouseTracker) {
+                activeBuilding = building;
+                sleep(2000).then(() => activeBuilding = null);
+                break
+            }
+            if (mouseTracker && mouse.clicked){
+            }
+        };
+    
+        selectedBuilding = activeBuilding.towerType;
+    
+        iconArray.forEach(icon => {
+            if (icon.iconTowerType === selectedBuilding) {
+                width = icon.width;
+                height = icon.height / 4;
+                buttonPositionX = icon.x;
+                buttonPositionY = icon.y + (height * 4) + 3;
+            };
+        });
+    
+        let cardbuttons = ['upgrade', 'move', 'sell'];
+    
+        //populate upgradeButtonsArray
+        //this is where the information for drawUIs() is coming from [line: 467]
+        cardbuttons.forEach((button) => {
+            upgradeButtonsArray.push(
+                new UI(width, height, button, buttonPositionX, buttonPositionY, lifespan)
+            );
+    
+            //increase buttonPositionY by height
+            buttonPositionY = buttonPositionY + height;
+        });
+    
+        upgradeButtonsArray.push(building);
+        console.log(upgradeButtonsArray);
 
-        if (mouseTracker){
-            activeTower = tower;
-        }
-        if (mouseTracker && mouse.clicked){
-        }
-    };
+    }
 });
-
-//~~deprecated for now, no need for a function of it's own...I think~~//
-
-// function isSelected() {
-//     iconArray.forEach(icon => {
-//         if (icon.towerType === selectedIcon) {
-//             icon.selectedStroke = 'black';
-//             chosenTower = icon.towerType;
-//             chosenBuilding = 1;
-//             towerCost = waterTower.cost;
-//         } else {
-//             icon.selectedStroke = 'orange';
-//         }
-//     });
-// };
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
