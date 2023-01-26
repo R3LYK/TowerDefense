@@ -29,7 +29,6 @@ let round = 0;
 const buildings = [];
 let activeTile = undefined;
 
-let chosenBuilding;
 
 let damage = Building.damage;
 let brokerOffset = 150;
@@ -305,78 +304,48 @@ const windTower = new WindTower(zeroPos);
 
 let buildingIconArray = [FireTower, WaterTower, IceTower, WindTower];
 
-let icons2 = [
-    {
-    iconBuilding: FireTower,
-    x: 900,
-    y:  10,
-    width: 70,
-    height: 85
-    },
-    {
-    iconBuilding: WaterTower,
-    x: 990,
-    y: 10,
-    width: 70,
-    height: 85
-    },
-    {
-    iconBuilding: IceTower,
-    x: 1080,
-    y: 10,
-    width: 70,
-    height: 85
-    },
-    {
-    iconBuilding: WindTower,
-    x: 1170,
-    y: 10,
-    width: 70,
-    height: 85
-    }
 
-]
-
-function makeIconsGreatAgain() {
-
-    icons2.forEach((icon) => {
-        icon.push
-        new UI (icons2.width, icons2.height, icons2.iconBuilding, icons2.x, icons2.y)
-    })
-}
 
 let iconName;
-let iconTowerType;
+let towerType;
 const tempArray = [];
 
 function createIcons() {
     buildingIconArray.forEach((building) => {
-        let x;
-        let y = 10;
+        let width = 70;
+        let height = 85;
+        let positionX;
+        let positionY = 10;
+        let lineWidth = 3;
+        let textColor = 'white';
+        let textColor2 ='offwhite';
+        let fill = '#74B3CE';
+        let onActionFill = '#59A4C5';
+        let lineColor = '#25556A';
+        let onActionLineColor = '#1B3D4B';
+        
         
         if(building === FireTower){
-            x = 900;
-            iconName = 'FIRE';
-            iconTowerType = 'firetower';
+            positionX = 900;
+            buttonName = 'fireTower';
+            towerType = building;
         } else if (building === WaterTower){
-            x = 990;
-            iconName = 'WATER';
-            iconTowerType = 'watertower';
-
+            positionX = 990;
+            buttonName = 'waterTower';
+            towerType = building;
         } else if (building === IceTower){
-            x = 1080;
-            iconName = 'ICE';
-            iconTowerType = 'icetower';
-
+            positionX = 1080;
+            buttonName = 'iceTower';
+            towerType = building;
         } else if (building === WindTower){
-            x = 1170;
-            iconName = 'WIND';
-            iconTowerType = 'windtower';
-
+            positionX = 1170;
+            buttonName = 'windTower';
+            towerType = building;
         }
         iconArray.push(
-            new BuildingIcons(x, y, building)
-        )  
+            new UI(buttonName, towerType, width, height, positionX, positionY,
+                   lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
+        )
     })
     //console.log(iconArray[0]);
 };
@@ -406,8 +375,6 @@ function animate(timeStamp) {
     drawIcons(); // Draws icons
     drawUIs();
 
-
-    makeIconsGreatAgain();
 };
 
 
@@ -487,11 +454,12 @@ let md;
 
 function drawIcons() {
     iconArray.forEach((icon) => {
+        icon.drawIcon();
         icon.update(mouse);
     });
 
     upgradeButtonsArray.forEach((btn) => {
-        btn.update(mouse);
+        btn.btnUpdate(mouse);
     })
 };  
 
@@ -502,18 +470,11 @@ function drawContextMenu() {
 };
 
 function drawUIs() {
-
     //looping through upgradeButtonsArray and calling UI method drawBtn() 
     //to create and render the buttons. Works with the 'event listener' below
 
     for (let i = 0; i < upgradeButtonsArray.length; i++) {
         const ub = upgradeButtonsArray[i];
-
-        const mouseTracker = 
-        mouse.x > ub.x &&
-        mouse.x < ub.x + ub.width + 8 &&
-        mouse.y > ub.y &&
-        mouse.y < ub.y + ub.height + 8
 
         if(ub.buttonName === 'upgrade' || 
             ub.buttonName == 'move' || 
@@ -521,9 +482,6 @@ function drawUIs() {
             ub.drawBtn();
         }
     }
-
-    
-
     //this needs refactored once I get around to the context menu
     //the solution above for buttons is much cleaner, and will
     //be easier to add more functionality later without rewriting
@@ -543,11 +501,15 @@ let btn = new UI; //this is temporarily(lol) handling an error with btn being un
 let moveBtn = new UI;
 let tower = null;
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~~~EVENT LISTENER FOR MOST BUTTONS~~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//****************************//
+//****************************//
+//***EVENT_LISTENER'S_BELOW***//
+//****************************//
+//****************************//
 
-
+            //~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~BUILDING PLACEMENT~~//
+            //~~~~~~~~~~~~~~~~~~~~~~//
 
 window.addEventListener('click', (event) => {
     //~~BUILDING PLACEMENT FUNCTION~~//
@@ -572,9 +534,9 @@ window.addEventListener('click', (event) => {
 money.innerHTML = ('MONEY: ' + playerMoney);
 lives.innerHTML = ('LIVES: ' + playerLives)
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~ALLOWED PLACEMENT INDICATOR~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~ALLOWED PLACEMENT INDICATOR~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 window.addEventListener('mousemove', (event) => {
     mouse.x = event.clientX;
@@ -596,12 +558,12 @@ window.addEventListener('mousemove', (event) => {
     // console.log(activeTile);
 })
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~~~SELECTED ICON INDICATOR~~~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~SELECTED ICON INDICATOR~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 let selectedIcon;
-
+//aaa
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
@@ -625,9 +587,7 @@ window.addEventListener('click', (e) => {
     selectedIcon = activeIcon.towerType;
     iconArray.forEach(icon => {
         if (icon.towerType === selectedIcon) {
-            icon.selectedStroke = 'black';
-            chosenTower = icon.towerType;
-            chosenBuilding = 1;
+            icon.selectedStroke = 'blue';
             towerCost = waterTower.cost;
         } else {
             icon.selectedStroke = 'orange';
@@ -635,19 +595,30 @@ window.addEventListener('click', (e) => {
     });
 });
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~~~UPGRADE MENU CREATION ONCLICK~~~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~UPGRADE MENU CREATION ONCLICK~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 let lifespan;
 
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
+    let activeBuilding;
+    let cardbuttons = ['upgrade', 'move', 'sell'];
+    let towerType;
+    let lineWidth = 3;
+    let textColor = 'white';
+    let textColor2 ='offwhite';
+    let fill = '#74B3CE';
+    let onActionFill = '#4092B5';
+    let lineColor = '#25556A';
+    let onActionLineColor = '#1B3D4B';
 
     if(clickCount === 0){
-        console.log(upgradeButtonsArray);
+        //('aaa ' + upgradeButtonsArray);
         clickCount = 1;
+        sleep(100).then(() => clickCount = 0);
         for (let i = 0; i < buildings.length; i++) {
             const building = buildings[i];
             
@@ -659,7 +630,8 @@ window.addEventListener('click', (e) => {
             
             if (mouseTracker) {
                 activeBuilding = building;
-                sleep(2000).then(() => activeBuilding = null);
+                towerType = building.towerType;
+                sleep(5000).then(() => activeBuilding = null);
                 break
             }
             if (mouseTracker && mouse.clicked){
@@ -667,9 +639,12 @@ window.addEventListener('click', (e) => {
         };
     
         selectedBuilding = activeBuilding.towerType;
+        //console.log(selectedBuilding);
     
         iconArray.forEach(icon => {
-            if (icon.iconTowerType === selectedBuilding) {
+            //(icon.buttonName);
+            //icon.towerType?? might need changed with refactoring of icon contructor => ui constructor
+            if (icon.buttonName.toLowerCase() === selectedBuilding) {
                 width = icon.width;
                 height = icon.height / 4;
                 buttonPositionX = icon.x;
@@ -677,13 +652,12 @@ window.addEventListener('click', (e) => {
             };
         });
     
-        let cardbuttons = ['upgrade', 'move', 'sell'];
-    
         //populate upgradeButtonsArray
         //this is where the information for drawUIs() is coming from [line: 467]
         cardbuttons.forEach((button) => {
             upgradeButtonsArray.push(
-                new UI(width, height, button, buttonPositionX, buttonPositionY, lifespan)
+                new UI(button, towerType, width, height, buttonPositionX, buttonPositionY,
+                       lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
             );
     
             //increase buttonPositionY by height
@@ -691,11 +665,41 @@ window.addEventListener('click', (e) => {
         });
     
         upgradeButtonsArray.push(building);
-        console.log(upgradeButtonsArray);
+        //console.log(upgradeButtonsArray);
 
     }
 });
 
+function buttonOnclick(button, towerType) {
+    console.log('clicked');
+    clickCount = 1;
+    sleep(400).then(() => clickCount = 0);
+
+   
+        buildings.forEach((building) => {
+            console.log('button = ' + button);
+            if (button === 'upgrade' && building.towerType === towerType) {
+                building.towerLevel += 1;
+                building.fireRadius += 10;
+                building.fireRate += 3;
+                building.damage += .2;
+            } 
+            
+            if (button === 'sell' && building.towerType === towerType) {
+                //remove building from array
+                buildings.splice(buildings.indexOf(building), 1);
+                //reset building.isOccupied to false
+                placementTiles.forEach(tile => {
+                    if (tile.position.x === building.position.x && tile.position.y === building.position.y) {
+                        tile.isOccupied = false;
+                    }
+                });
+                //add building cost to playerMoney
+                playerMoney += building.cost / 2;;
+            }
+        });
+    
+};
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//

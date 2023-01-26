@@ -32,34 +32,50 @@ class PlacementTile {
 };
 
 class UI {
-    constructor(width, height, buttonName, buttonPositionX, buttonPositionY) {
+    constructor(buttonName, towerType, width, height, buttonPositionX, buttonPositionY,
+                lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor) {
+        //specs
         this.x = buttonPositionX;
         this.y = buttonPositionY;
         this.width = width;
         this.height = height;
         this.size = (this.width * 2) + (this.height * 2);
-        this.color = 'rgba(0,0,0,0.4)';
-        this.selectedStroke = 'red';
-        this.isSelected = false;
+        //naming
         this.buttonName = buttonName;
+        this.towerType = towerType;
+        //state
+        this.isSelected = false;
         this.lifespan = 0;
         this.deleteSelf = 3000;
-        this.buttonFill = 'green';
+        //colors and styles
+        this.lineWidth = lineWidth;
+        this.textColor = textColor;
+        this.textColor2 = textColor2;
+        this.fill = fill;
+        this.onActionFill = onActionFill;
+        this.lineColor = lineColor;
+        this.onActionLineColor = onActionLineColor;
+        //on_action state change holder variables
+        this.activeFill = this.fill;
+        this.activeTextColor = this.textColor;
+        this.activeLineColor = this.lineColor
+        this.activeLineWidth = this.lineWidth;
     };
     //~~THIS IS DONE CORRECTLY~~//
-    //This *should* be able to made reusable for all buttons.
+    //This *should* be able to be made reusable for all buttons.
     //Future me, figure it out!!!
     drawBtn() {
        
         c.lineWidth = 3;
-        c.fillStyle = this.buttonFill;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = 'orange';
-        c.strokeRect(this.x, this.y, this.width, this.height);
+        c.fillStyle = this.activeFill;
+        c.fillRect(this.x, this.y -2.5, this.width, this.height);
+        c.strokeStyle = this.activeLineColor;
+        c.strokeRect(this.x, this.y -2.5, this.width, this.height);
 
         c.font = '12px Arial';
-        c.fillStyle = 'white';
-        c.fillText(this.buttonName.toUpperCase(), this.x + (this.width / 8), this.y + (this.height / 2) + 4);
+        c.fillStyle = this.activeTextColor;
+        c.textAlign = 'center';
+        c.fillText(this.buttonName.toUpperCase(), this.x -2.5 + (this.width / 2), this.y - 2.5 + (this.height / 2 + this.lineWidth * 2))//TEMP TEMP TEMP//
         this.lifespan += deltaTime;
 
         for (let i = 0; i < upgradeButtonsArray.length; i++) {
@@ -82,73 +98,21 @@ class UI {
             mouse.y < this.y + this.height)
 
         if  (mouseDetection){
-            this.color = 'rgba(25, 255, 255, .4)';
-            this.buttonFill = 'red';
+            //handles icon on_hover colors
+            this.activeFill = this.onActionFill;
+            this.activeLineWidth = this.lineWidth + .8;
+            this.activeLineColor = this.onActionLineColor;
         } else {
-            this.color = 'rgba(25, 255, 255, .2)';
-            this.buttonFill = 'green';
+            //handles icon on_hover colors
+            this.activeFill = this.fill;
+            this.activeLineWidth = this.lineWidth;
+            this.activeLineColor = this.lineColor;
         }
-    }
-
-    //~~THIS IS DONE POORLY~~//
-    drawContextMenu() {
-        c.lineWidth = 1;
-        c.fillStyle = this.color;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = this.selectedStroke;
-        c.strokeRect(this.x, this.y, this.width, this.height);
         
+    }; 
 
-        c.font = '12px Arial';
-        c.fillStyle = 'white';
-        c.fillText('First', this.x + 5, this.y + 15);
-        c.fillText('Last', this.x + 5, this.y + 30);
-        c.fillText('Most Health', this.x + 5, this.y + 45);
-        c.fillText('Least Health', this.x + 5, this.y + 60);
-    };  
-
-    drawIcon(){
-        c.lineWidth = 3;
-        c.fillStyle = this.color;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = this.selectedStroke;
-        c.strokeRect(this.x, this.y, this.width, this.height);
+    btnUpdate(mouse) {
         
-        c.font = '16px Arial';
-        c.fillStyle = 'black';
-        c.fillText(this.iconName, this.x + 10, this.y + 45)//TEMP TEMP TEMP//
-    }
-}
-//This needs merged into UI...eventually
-class BuildingIcons{
-    constructor(x, y, building){
-        this.x = x;
-        this.y = y;
-        this.width = 70;
-        this.height = 85;
-        this.size = (this.width * 2) + (this.height * 2);
-        this.towerType = building;
-        this.iconName = iconName;
-        this.iconTowerType = iconTowerType;
-        this.color = 'rgba(25, 255, 255, .2)';
-        this.selectedStroke = 'orange';
-        this.isSelected = false; 
-    };
-
-    draw() {
-        c.lineWidth = 3;
-        c.fillStyle = this.color;
-        c.fillRect(this.x, this.y, this.width, this.height);
-        c.strokeStyle = this.selectedStroke;
-        c.strokeRect(this.x, this.y, this.width, this.height);
-        
-        c.font = '16px Arial';
-        c.fillStyle = 'black';
-        c.fillText(this.iconName, this.x + 10, this.y + 45)//TEMP TEMP TEMP//
-    };
-
-    update(mouse) {
-        this.draw()
         const mouseDetection = (
             mouse.x > this.x && 
             mouse.x < this.x + this.width &&
@@ -156,14 +120,38 @@ class BuildingIcons{
             mouse.y < this.y + this.height)
 
         if  (mouseDetection){
-            this.color = 'rgba(25, 255, 255, .4)';
+            //handles icon on_hover colors
+            this.activeFill = this.onActionFill;
+            this.activeLineWidth = this.lineWidth + .8;
+            this.activeLineColor = this.onActionLineColor;
         } else {
-            this.color = 'rgba(25, 255, 255, .2)';
+            //handles icon on_hover colors
+            this.activeFill = this.fill;
+            this.activeLineWidth = this.lineWidth;
+            this.activeLineColor = this.lineColor;
         }
+        if (mouseDetection && mouse.clicked && clickCount === 0) {
+            let button = this.buttonName;
+            let towerType = this.towerType;
+            buttonOnclick(button, towerType);
+        }
+    }
+
+    drawIcon(){
+        c.lineWidth = this.activeLineWidth;
+        c.fillStyle = this.activeFill;
+        c.fillRect(this.x, this.y, this.width, this.height);
+        c.strokeStyle = this.activeLineColor;
+        c.strokeRect(this.x, this.y, this.width, this.height);
+        
+        c.font = '16px Arial';
+        c.fillStyle = this.activeTextColor;
+        c.textAlign = 'center';
+        c.fillText(this.buttonName.replace('Tower', '').toUpperCase(), this.x + (this.width / 2), this.y + (this.height / 2 + this.lineWidth * 2))//TEMP TEMP TEMP//
         
     };
 
-};
+}
 
 class Cell {
     constructor(x, y){
@@ -285,7 +273,6 @@ class Building {
         this.target;
         this.frames = 0;
         this.specialTimer = 0;
-        this.chosenBuilding = chosenBuilding;
         this.radiusColor = 'rgba(255, 255, 255, .3)';
     };
 
@@ -309,7 +296,7 @@ class Building {
 
             c.font = '12px Arial';
             c.fillStyle = 'black';
-            c.fillText(('damage: ' + this.damage), this.position.x + 40, this.position.y + 45);
+            c.fillText(('damage: ' + this.damage.toFixed(2)), this.position.x + 40, this.position.y + 45);
     };
 
     update() {
