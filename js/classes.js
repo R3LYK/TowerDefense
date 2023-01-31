@@ -84,12 +84,13 @@ class UI {
             if(ub.lifespan > ub.deleteSelf) {
             upgradeButtonsArray.splice(i, 1);
             clickCount = 0;
+           // activeBuilding = null;
 
             }; 
         };
     };
 
-    update(mouse) {
+    iconUpdate(mouse) {
         // this.drawButton()
         const mouseDetection = (
             mouse.x > this.x && 
@@ -130,12 +131,7 @@ class UI {
             this.activeLineWidth = this.lineWidth;
             this.activeLineColor = this.lineColor;
         }
-        if (mouseDetection && mouse.clicked && clickCount === 0) {
-            let button = this.buttonName;
-            let towerType = this.towerType;
-            buttonOnclick(button, towerType);
-        }
-    }
+    };
 
     drawIcon(){
         c.lineWidth = this.activeLineWidth;
@@ -274,8 +270,8 @@ class Building {
         this.frames = 0;
         this.specialTimer = 0;
         this.radiusColor = 'rgba(255, 255, 255, .3)';
+        this.canBeMoved = false;
     };
-
 
     draw() {
             c.fillStyle = this.color;
@@ -314,7 +310,6 @@ class Building {
         }
         this.frames++
     };
-
 };
 
 class WaterTower extends Building {

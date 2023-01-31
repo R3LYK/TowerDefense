@@ -16,6 +16,7 @@ let playerMoney = 200000;
 let playerLives = 50;
 let radiusColor = 'rgba(255, 255, 255, 0.2)';
 
+
 lastTime = 0;
 
 zeroPos = {x: 0, y: 0};
@@ -88,9 +89,18 @@ placementTilesData2D.forEach((row, y) => {
     })
 });
 
-//~~~~~~~~~~~~~~~~~~~~~~~//
-//~~REUSABLE FUNCTIONS~~//
-//~~~~~~~~~~~~~~~~~~~~~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~REUSABLE FUNCTIONS~~//
+            //~~~~~~~~~~~~~~~~~~~~~~//
+
+//reset building.isOccupied to 'false', so that new buildings can be placed there.
+function resetPlacementTile (building) {
+    placementTiles.forEach((tile) => {
+        if (tile.position.x === building.position.x && tile.position.y === building.position.y) {
+            tile.isOccupied = false;
+        };
+    });
+};
 
 function insertAt(array, index, ...elementsArray) {
     array.splice(index, 0, ...elementsArray);
@@ -107,7 +117,9 @@ function collision(first, second){
 };
 
 //~~function for detecting mouse collision with object in canvas using 'position object (position = {x:x, y:y}~~//
-function collisionP(first, second){
+//Only 'Buildings' use this. Should have been more consistent in my constructors...
+//throwing it on the 'will fix later' pile.
+function collisionWithPosition(first, second){
     if ( 
         first.x > second.position.x && 
         first.x < second.position.x + second.width &&
@@ -199,7 +211,7 @@ let speed = baseSpeed;
 //Made these while trying to get a counter to work,
 //but everything kept getting messed up. Stupid animate function...
 let nextRound = document.getElementById('next_round');
-let seconds = 20;
+
 
 //Hacky way to create a delay by slowing the speed of enemies,
 //while they're travelling from waypoint[0] -> [1],
@@ -216,7 +228,6 @@ function roundDelay() {
     }
 };
 
-
 function placeTiles() {
     placementTiles.forEach((tile) => {
         tile.update(mouse);
@@ -229,11 +240,6 @@ function sortEnemies() {
     sortedEnemiesTest = enemies.sort((a, b) => {
         return b.position.x - a.position.x;
     });
-};
-
-
-function countSeconds(seconds) {
-    seconds -= 1;
 };
 
 function targetEnemy() {
@@ -323,8 +329,6 @@ function createIcons() {
         let onActionFill = '#59A4C5';
         let lineColor = '#25556A';
         let onActionLineColor = '#1B3D4B';
-        
-        
         if(building === FireTower){
             positionX = 900;
             buttonName = 'fireTower';
@@ -374,21 +378,31 @@ function animate(timeStamp) {
     targetEnemy();   // handles targeting of 'basic' enemies
     drawIcons(); // Draws icons
     drawUIs();
-
 };
 
-
+let dragging = false;
+let toBeDragged = [];
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~mouse tracking and event listeners~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-canvas.addEventListener('mousedown', function(){
+canvas.addEventListener('mousedown', function(e){
+    e.preventDefault();
+
     mouse.clicked = true;
 });
 
-canvas.addEventListener('mouseup', function(){
+// function draggingEventListener() {
+//     canvas.addEventListener('mousedown', onMouseDown);
+//     canvas.addEventListener('mousemove', onMouseMove)
+//     canvas.addEventListener('mouseup', onMouseUp);
+// }
+
+
+canvas.addEventListener('mouseup', function(e){
+    e.preventDefault();
     mouse.clicked = false;
 });
 
@@ -396,9 +410,12 @@ canvas.addEventListener('mouseup', function(){
 let canvasPosition = canvas.getBoundingClientRect();
 
 canvas.addEventListener('mousemove', function(e){
+    e.preventDefault();
+
     mouse.x = e.x - canvasPosition.left;
     mouse.y = e.y - canvasPosition.top;
 });
+
 
 canvas.addEventListener('mouseleave', function(){
     mouse.y = undefined;
@@ -429,7 +446,7 @@ canvas.addEventListener('contextmenu', function(e){
         //out how to only display only while mouse within x,y
         //maybe future me can...god speed future me, you sucker
 
-        if (collisionP(mouse, building)) {
+        if (collisionWithPosition(mouse, building)) {
             contextMenuArray[0] = new UI(building.width, building.height, buttonName, buttonPositionX, buttonPositionY);
             sleep(4000).then(() => contextMenuArray.splice(0, 1));
             
@@ -455,12 +472,16 @@ let md;
 function drawIcons() {
     iconArray.forEach((icon) => {
         icon.drawIcon();
-        icon.update(mouse);
+        icon.iconUpdate(mouse);
     });
 
     upgradeButtonsArray.forEach((btn) => {
         btn.btnUpdate(mouse);
-    })
+    });
+
+    // buildings.forEach((building) => {
+    //     building.dragAndDrop(mouse, activeBuilding);
+    // });
 };  
 
 function drawContextMenu() {
@@ -475,11 +496,13 @@ function drawUIs() {
 
     for (let i = 0; i < upgradeButtonsArray.length; i++) {
         const ub = upgradeButtonsArray[i];
+        const bn = ub.buttonName;
 
-        if(ub.buttonName === 'upgrade' || 
-            ub.buttonName == 'move' || 
-            ub.buttonName == 'sell'){
-            ub.drawBtn();
+        switch(bn){
+            case 'upgrade':
+            case 'move':
+            case 'sell':
+                ub.drawBtn();
         }
     }
     //this needs refactored once I get around to the context menu
@@ -492,7 +515,6 @@ function drawUIs() {
             menu.drawContextMenu();
         }
     })
-    
 };  
 
 
@@ -595,18 +617,19 @@ window.addEventListener('click', (e) => {
     });
 });
 
-            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-            //~~UPGRADE MENU CREATION ONCLICK~~//
-            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~ALL THINGS UPGRADE MENU~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 let lifespan;
+let activeBuilding = [];
+
 
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
-    let activeBuilding;
-    let cardbuttons = ['upgrade', 'move', 'sell'];
-    let towerType;
+    
+    let iconMenu = ['upgrade', 'move', 'sell'];
     let lineWidth = 3;
     let textColor = 'white';
     let textColor2 ='offwhite';
@@ -616,90 +639,96 @@ window.addEventListener('click', (e) => {
     let onActionLineColor = '#1B3D4B';
 
     if(clickCount === 0){
-        //('aaa ' + upgradeButtonsArray);
         clickCount = 1;
-        sleep(100).then(() => clickCount = 0);
-        for (let i = 0; i < buildings.length; i++) {
-            const building = buildings[i];
-            
-            const mouseTracker = 
-            mouse.x > building.position.x &&
-            mouse.x < building.position.x + building.width + 8 &&
-            mouse.y > building.position.y &&
-            mouse.y < building.position.y + building.height + 8
-            
-            if (mouseTracker) {
+        sleep(400).then(() => clickCount = 0);
+
+        //creates upgrade menu.
+
+        buildings.forEach((building) => {
+             if (collisionWithPosition(mouse, building)) {
                 activeBuilding = building;
-                towerType = building.towerType;
-                sleep(5000).then(() => activeBuilding = null);
-                break
-            }
-            if (mouseTracker && mouse.clicked){
-            }
-        };
-    
-        selectedBuilding = activeBuilding.towerType;
-        //console.log(selectedBuilding);
-    
-        iconArray.forEach(icon => {
-            //(icon.buttonName);
-            //icon.towerType?? might need changed with refactoring of icon contructor => ui constructor
-            if (icon.buttonName.toLowerCase() === selectedBuilding) {
-                width = icon.width;
-                height = icon.height / 4;
-                buttonPositionX = icon.x;
-                buttonPositionY = icon.y + (height * 4) + 3;
+                console.log(activeBuilding);
+                
+                iconArray.forEach(icon => {
+                    if (icon.buttonName.toLowerCase() === activeBuilding.towerType) {
+                        width = icon.width;
+                        height = icon.height / 4;
+                        buttonPositionX = icon.x;
+                        buttonPositionY = icon.y + (height * 4) + 3;
+                    };
+                });
+
+                //populates upgradeButtonsArray.
+                iconMenu.forEach((button) => {
+                    upgradeButtonsArray.push(
+                        new UI(button, activeBuilding.towerType, width, height, buttonPositionX, buttonPositionY,
+                               lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
+                    );
+                    //increase buttonPositionY by height.
+                    buttonPositionY = buttonPositionY + height;
+                });
             };
         });
-    
-        //populate upgradeButtonsArray
-        //this is where the information for drawUIs() is coming from [line: 467]
-        cardbuttons.forEach((button) => {
-            upgradeButtonsArray.push(
-                new UI(button, towerType, width, height, buttonPositionX, buttonPositionY,
-                       lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
-            );
-    
-            //increase buttonPositionY by height
-            buttonPositionY = buttonPositionY + height;
-        });
-    
-        upgradeButtonsArray.push(building);
-        //console.log(upgradeButtonsArray);
 
-    }
+        //handles the upgrade menu on_click actions 'upgrade', 'move', 'sell'.
+        for (let btn of upgradeButtonsArray) {
+            if (collision(mouse, btn)) {
+                btn = btn.buttonName;
+
+                switch(btn) {
+                    case 'upgrade':
+                        console.log('upgrade');
+                        //just examples of what needs updated on upgrade. Will need balanced later.
+                        //console.log(activeBuilding);
+                        activeBuilding.towerLevel += 1;
+                        activeBuilding.damage += 1;
+                        activeBuilding.fireRadius += 3;
+                        activeBuilding.fireRate += 1;
+                        break;
+                    case 'move':
+                        console.log('move');
+                        activeBuilding.canBeMoved = true;
+                        break;
+                    case 'sell':
+                        console.log('sell');
+                        buildings.splice(buildings.indexOf(activeBuilding), 1);
+                        upgradeButtonsArray = [];
+
+                        
+                        resetPlacementTile(activeBuilding);
+                        //another placeholder that will need balancing. Need to adjust for cost of upgrades too probably.
+                        playerMoney += activeBuilding.cost / 2;
+                        break;
+                    default:
+                        console.log('default');
+                }
+            }
+        }           
+    };
 });
 
-function buttonOnclick(button, towerType) {
-    console.log('clicked');
-    clickCount = 1;
-    sleep(400).then(() => clickCount = 0);
+//WIP for dragging, need to figure out how to get continuous mouse position while mousedown
 
-   
-        buildings.forEach((building) => {
-            console.log('button = ' + button);
-            if (button === 'upgrade' && building.towerType === towerType) {
-                building.towerLevel += 1;
-                building.fireRadius += 10;
-                building.fireRate += 3;
-                building.damage += .2;
-            } 
+window.addEventListener('mousedown', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.clicked = true;
+    buildings.forEach((building) => {
+        if (collisionWithPosition(mouse, building) && building.canBeMoved && mouse.clicked) {
+            console.log(mouse.x);
+        }
             
-            if (button === 'sell' && building.towerType === towerType) {
-                //remove building from array
-                buildings.splice(buildings.indexOf(building), 1);
-                //reset building.isOccupied to false
-                placementTiles.forEach(tile => {
-                    if (tile.position.x === building.position.x && tile.position.y === building.position.y) {
-                        tile.isOccupied = false;
-                    }
-                });
-                //add building cost to playerMoney
-                playerMoney += building.cost / 2;;
-            }
-        });
-    
-};
+    });
+
+});
+
+
+
+
+
+
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//
