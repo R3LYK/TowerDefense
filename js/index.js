@@ -102,6 +102,7 @@ function resetPlacementTile (building) {
     });
 };
 
+// I think this has to do with targetting?? 
 function insertAt(array, index, ...elementsArray) {
     array.splice(index, 0, ...elementsArray);
 };
@@ -117,7 +118,7 @@ function collision(first, second){
 };
 
 //~~function for detecting mouse collision with object in canvas using 'position object (position = {x:x, y:y}~~//
-//Only 'Buildings' use this. Should have been more consistent in my constructors...
+//Only 'Buildings' and placementTiles use this format. Should have been more consistent...
 //throwing it on the 'will fix later' pile.
 function collisionWithPosition(first, second){
     if ( 
@@ -182,7 +183,6 @@ function removeEnemy() {
         enemy.update();    
 
         if(enemy.position.x > canvas.width){
-            // console.log('lose life')
             enemies.splice(i,1);
             playerLives -= 1;
             lives.innerHTML = ('LIVES: ' + playerLives)
@@ -351,7 +351,6 @@ function createIcons() {
                    lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
         )
     })
-    //console.log(iconArray[0]);
 };
 
 //~~Calling all functions for creating map, UI, and running game~~//
@@ -380,8 +379,7 @@ function animate(timeStamp) {
     drawUIs();
 };
 
-let dragging = false;
-let toBeDragged = [];
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~mouse tracking and event listeners~//
@@ -389,33 +387,14 @@ let toBeDragged = [];
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
 canvas.addEventListener('mousedown', function(e){
-    e.preventDefault();
-
     mouse.clicked = true;
 });
 
-// function draggingEventListener() {
-//     canvas.addEventListener('mousedown', onMouseDown);
-//     canvas.addEventListener('mousemove', onMouseMove)
-//     canvas.addEventListener('mouseup', onMouseUp);
-// }
-
-
-canvas.addEventListener('mouseup', function(e){
-    e.preventDefault();
+canvas.addEventListener('mouseup', function(){
     mouse.clicked = false;
 });
 
-
 let canvasPosition = canvas.getBoundingClientRect();
-
-canvas.addEventListener('mousemove', function(e){
-    e.preventDefault();
-
-    mouse.x = e.x - canvasPosition.left;
-    mouse.y = e.y - canvasPosition.top;
-});
-
 
 canvas.addEventListener('mouseleave', function(){
     mouse.y = undefined;
@@ -533,24 +512,26 @@ let tower = null;
             //~~BUILDING PLACEMENT~~//
             //~~~~~~~~~~~~~~~~~~~~~~//
 
-window.addEventListener('click', (event) => {
+window.addEventListener('click', () => {
     //~~BUILDING PLACEMENT FUNCTION~~//
-    if(activeTile && !activeTile.isOccupied && playerMoney > towerCost) {
-        buildings.push(
-            new selectedIcon({
-                position: {
-                    x: activeTile.position.x,
-                    y: activeTile.position.y
-                }
-            })
-        );
-        //console.log(buildings);
-        activeTile.isOccupied = true;
-        playerMoney -= towerCost;
-        moneyUpdate();
-        clickCount = 1;
-        sleep(100).then(() => clickCount = 0);
-    };
+    if (selectedIcon != null){
+        if(activeTile && !activeTile.isOccupied && playerMoney > towerCost) {
+            buildings.push(
+                new selectedIcon({
+                    position: {
+                        x: activeTile.position.x,
+                        y: activeTile.position.y
+                    }
+                })
+            );
+            activeTile.isOccupied = true;
+            playerMoney -= towerCost;
+            moneyUpdate();
+            clickCount = 1;
+            sleep(100).then(() => clickCount = 0);
+            selectedIcon = null;
+        };
+    }
 });
 
 money.innerHTML = ('MONEY: ' + playerMoney);
@@ -575,16 +556,15 @@ window.addEventListener('mousemove', (event) => {
         ) {
             activeTile = tile;
             break
-        }
-    }
-    // console.log(activeTile);
+        };
+    };
 })
 
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
             //~~SELECTED ICON INDICATOR~~//
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-let selectedIcon;
+let selectedIcon = null;
 //aaa
 window.addEventListener('click', (e) => {
     mouse.x = e.clientX;
@@ -601,12 +581,13 @@ window.addEventListener('click', (e) => {
         
         if (mouseTracker) {
             activeIcon = icon;
+            selectedIcon = activeIcon.towerType;
             break
         }
         if (mouseTracker && mouse.clicked){
         }
     };
-    selectedIcon = activeIcon.towerType;
+    
     iconArray.forEach(icon => {
         if (icon.towerType === selectedIcon) {
             icon.selectedStroke = 'blue';
@@ -647,7 +628,7 @@ window.addEventListener('click', (e) => {
         buildings.forEach((building) => {
              if (collisionWithPosition(mouse, building)) {
                 activeBuilding = building;
-                console.log(activeBuilding);
+                console.log(activeBuilding.position.x, activeBuilding.position.y);
                 
                 iconArray.forEach(icon => {
                     if (icon.buttonName.toLowerCase() === activeBuilding.towerType) {
@@ -679,15 +660,16 @@ window.addEventListener('click', (e) => {
                     case 'upgrade':
                         console.log('upgrade');
                         //just examples of what needs updated on upgrade. Will need balanced later.
-                        //console.log(activeBuilding);
                         activeBuilding.towerLevel += 1;
                         activeBuilding.damage += 1;
                         activeBuilding.fireRadius += 3;
                         activeBuilding.fireRate += 1;
+                        upgradeButtonsArray = [];
                         break;
                     case 'move':
                         console.log('move');
                         activeBuilding.canBeMoved = true;
+                        dragging = true;
                         break;
                     case 'sell':
                         console.log('sell');
@@ -699,35 +681,136 @@ window.addEventListener('click', (e) => {
                         //another placeholder that will need balancing. Need to adjust for cost of upgrades too probably.
                         playerMoney += activeBuilding.cost / 2;
                         break;
-                    default:
-                        console.log('default');
                 }
             }
         }           
     };
 });
 
-//WIP for dragging, need to figure out how to get continuous mouse position while mousedown
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+            //~~3 EVENT LISTENERS FOR MOVING BUILDINGS~~//
+            //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+//I feel like there's a better way to do this, but I'm just happy it works.
+//Future me can deal with pesky effeciency issues, I already cleaned up past me's mess with this one.
+
+
+let originalPosition;
+let originalCenter;
+let dragging = false;
+let beingDragged = false;
+
+
+//handles assingments for movable buildings, 
+//and stores original position in case something goes wrong or cancelled *!(need to add a 'cancel' feature).
 
 window.addEventListener('mousedown', (e) => {
     mouse.x = e.clientX;
     mouse.y = e.clientY;
-    mouse.clicked = true;
-    buildings.forEach((building) => {
-        if (collisionWithPosition(mouse, building) && building.canBeMoved && mouse.clicked) {
-            console.log(mouse.x);
-        }
-            
-    });
 
+    if (dragging) {
+        for (building of buildings) {
+            if (collisionWithPosition(mouse, building) && building.canBeMoved) {
+                
+                originalPosition = {
+                    x: building.position.x,
+                    y: building.position.y
+                };
+                originalCenter = {
+                    x: building.center.x,
+                    y: building.center.y
+                };
+
+                building.isMoving = true;
+                beingDragged = true;
+            };
+        };
+    };
 });
 
 
 
+//handles the movement of the building while dragging.
+canvas.addEventListener('mousemove', function(e){
+
+    mouse.x = e.x - canvasPosition.left;
+    mouse.y = e.y - canvasPosition.top;
+
+    if (beingDragged) { 
+        for (b of buildings) {
+            if (b.isMoving) {
+                resetPlacementTile(b);
+                b.position = {
+                    x: mouse.x - (b.width / 2),
+                    y: mouse.y - (b.height / 2)
+                };
+                b.center = {
+                    x: mouse.x,
+                    y: mouse.y
+                };
+            };
+        };
+    };
+
+});
+
+//handles the release of the building, and checks if it's in a valid position, 
+//if not, it resets to original position.
 
 
+//BUG: [1] if a building is dropped over a non-active tile, and reverts to it's OG position,
+//it does not reset the tile to it's original state. Meaning, you can stack buildings on top of each other.
+canvas.addEventListener('mouseup', function(e){
 
+    mouse.x = e.x - canvasPosition.left;
+    mouse.y = e.y - canvasPosition.top;
 
+    if (beingDragged) {
+        for (b of buildings) {
+            if (b.isMoving) {
+                
+                if (activeTile === null || activeTile.isOccupied) {
+                    //BUG [1] is in here.
+
+                    b.position = {
+                        x: originalPosition.x,
+                        y: originalPosition.y
+                    };
+
+                    b.center = {
+                        x: originalCenter.x,
+                        y: originalCenter.y
+                    };
+
+                    b.isMoving = false;
+                    b.canBeMoved = false;
+                    activeTile.isOccupied = true;
+                    dragging = false;
+                    beingDragged = false;
+
+                } else if (activeTile != null || !activeTile.isOccupied) {
+                    
+                    b.position = {
+                        x: activeTile.position.x,
+                        y: activeTile.position.y
+                    };
+
+                    b.center = {
+                        x: b.position.x + b.width/2,
+                        y: b.position.y + b.height/2
+                    };
+
+                    b.isMoving = false;
+                    b.canBeMoved = false;
+                    activeTile.isOccupied = true;
+                    dragging = false;
+                    beingDragged = false;
+
+                };
+            }; 
+        };
+    };
+});
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//

@@ -271,6 +271,7 @@ class Building {
         this.specialTimer = 0;
         this.radiusColor = 'rgba(255, 255, 255, .3)';
         this.canBeMoved = false;
+        this.isMoving = false;
     };
 
     draw() {
