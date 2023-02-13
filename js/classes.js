@@ -66,7 +66,7 @@ class UI {
     //Future me, figure it out!!!
     drawBtn() {
        
-        c.lineWidth = 3;
+        c.lineWidth = this.lineWidth;
         c.fillStyle = this.activeFill;
         c.fillRect(this.x, this.y -2.5, this.width, this.height);
         c.strokeStyle = this.activeLineColor;
@@ -78,16 +78,27 @@ class UI {
         c.fillText(this.buttonName.toUpperCase(), this.x -2.5 + (this.width / 2), this.y - 2.5 + (this.height / 2 + this.lineWidth * 2))//TEMP TEMP TEMP//
         this.lifespan += deltaTime;
 
+        //handles deletion of upgrade buttons
         for (let i = 0; i < upgradeButtonsArray.length; i++) {
             const ub = upgradeButtonsArray[i];
     
             if(ub.lifespan > ub.deleteSelf) {
             upgradeButtonsArray.splice(i, 1);
             clickCount = 0;
-           // activeBuilding = null;
 
             }; 
         };
+
+        for (let i = 0; i < contextMenuArray.length; i++) {
+            const cm = contextMenuArray[i];
+    
+            if(cm.lifespan > cm.deleteSelf) {
+            contextMenuArray.splice(i, 1);
+            clickCount = 0;
+            contextMenu = false;
+
+            }; 
+        }
     };
 
     iconUpdate(mouse) {
@@ -111,6 +122,7 @@ class UI {
         }
         
     }; 
+
 
     btnUpdate(mouse) {
         
@@ -272,6 +284,8 @@ class Building {
         this.radiusColor = 'rgba(255, 255, 255, .3)';
         this.canBeMoved = false;
         this.isMoving = false;
+        this.btarget = bt;
+        this.activeUI = false;
     };
 
     draw() {
@@ -354,7 +368,7 @@ class FireTower extends Building {
         this.towerLevel = 1;
         this.color = 'red';
         this.fireRadius = 250;
-        this.damage = 10;
+        this.damage = 5;
         this.cost = 1000;
         this.fireRate = 30;
     };

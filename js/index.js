@@ -15,6 +15,7 @@ let towerCost;
 let playerMoney = 200000;
 let playerLives = 50;
 let radiusColor = 'rgba(255, 255, 255, 0.2)';
+let bt = null;
 
 
 lastTime = 0;
@@ -30,7 +31,6 @@ let round = 0;
 const buildings = [];
 let activeTile = undefined;
 
-
 let damage = Building.damage;
 let brokerOffset = 150;
 let managerOffset = 200;
@@ -41,7 +41,7 @@ const mouse = {
     width: 0.1,
     height: 0.1,
     clicked: false,
-    clicked2: false,
+    rightClicked: false,
     hover: false,
 };
 
@@ -59,7 +59,6 @@ const placementTilesData2D = [];
 const placementTiles = [];
 
 let upgradeButtonsArray = [];
-let contextMenuArray = [];
 
 //~~starts animation loop & loads map image~~//
 image.onload = () => {
@@ -236,11 +235,22 @@ function placeTiles() {
 
 let sortedEnemiesTest = [];
 
+
 function sortEnemies() {
     sortedEnemiesTest = enemies.sort((a, b) => {
         return b.position.x - a.position.x;
     });
 };
+
+
+
+
+
+
+
+
+let enemyToTarget = 'first';
+
 
 function targetEnemy() {
 
@@ -255,11 +265,36 @@ function targetEnemy() {
             return distance < enemy.radius + building.fireRadius
         });
 
-        let targetLast = validEnemies[validEnemies.length - 1];
-        let targetFirst = validEnemies[0];
+        //handles targeting order based on user input in context menu.
+        if (validEnemies.length > 0) {
+            switch(enemyToTarget) { 
+                case 'first': {
+                    building.target = validEnemies[0];
+                }
+                break;
+                case 'last': {
+                    building.target = validEnemies[validEnemies.length - 1];
+                }
+                break;
+                case 'strong': {
+                    building.target = validEnemies.reduce((a, b) => {
+                        return a.health > b.health ? a : b;
+                    });
+                }
+                break;
+                case 'weak': {
+                    building.target = validEnemies.reduce((a, b) => {
+                        return a.health < b.health ? a : b;
+                    });
+                }
+                break;
+                default:
+                    building.target = validEnemies[0];
+            }
+        }
+        
 
-        building.target = targetLast;
-
+        //these need to be made switch cases once I get all the building 'specials' working.
         if (building.towerType === 'watertower') {
             if (building.specialTimer > building.specialInterval) {
                 validEnemies.forEach((enemy) => {
@@ -316,6 +351,8 @@ let iconName;
 let towerType;
 const tempArray = [];
 
+
+//This function creates the icons for the tower placements 
 function createIcons() {
     buildingIconArray.forEach((building) => {
         let width = 70;
@@ -353,6 +390,8 @@ function createIcons() {
     })
 };
 
+
+
 //~~Calling all functions for creating map, UI, and running game~~//
 //~~Eventually this all needs to be refactored into a loop that runs-
 //~~for the entirety of the game~~//
@@ -376,7 +415,8 @@ function animate(timeStamp) {
     placeTiles();       //displays acceptable tile placement points  
     targetEnemy();   // handles targeting of 'basic' enemies
     drawIcons(); // Draws icons
-    drawUIs();
+    drawUB();
+    drawContextMenu();
 };
 
 
@@ -386,7 +426,7 @@ function animate(timeStamp) {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-canvas.addEventListener('mousedown', function(e){
+canvas.addEventListener('mousedown', function(){
     mouse.clicked = true;
 });
 
@@ -407,32 +447,7 @@ let clickCount = 0;
 //~~RIGHT CLICK BUILDING TO CHOOSE TARGETING ORDER~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-canvas.addEventListener('contextmenu', function(e){
-    e.preventDefault();
-    mouse.clicked2 = true;
-    
-    for (let i = 0; i < buildings.length; i++) {
-        const building = buildings[i];
 
-        buttonPositionX = building.position.x;
-        buttonPositionY = building.position.y + building.height;
-        let buttonName = 'contextMenu';
-
-        //Detecting collison with building
-        //and displaying targeting buttons
-        //then allowing 4 seconds to choose
-        //because I'm not smart enough to figure
-        //out how to only display only while mouse within x,y
-        //maybe future me can...god speed future me, you sucker
-
-        if (collisionWithPosition(mouse, building)) {
-            contextMenuArray[0] = new UI(building.width, building.height, buttonName, buttonPositionX, buttonPositionY);
-            sleep(4000).then(() => contextMenuArray.splice(0, 1));
-            
-        } 
-    }
-
-});
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~SELECT BUILDING FOR UPGRADE/SELL~~//
@@ -448,33 +463,29 @@ let buttonPositionY = 0;
 
 let md;
 
+//handles 'onHover' for all buttons/icons.
 function drawIcons() {
-    iconArray.forEach((icon) => {
+
+    for(icon of iconArray) {
         icon.drawIcon();
         icon.iconUpdate(mouse);
-    });
+    };
 
-    upgradeButtonsArray.forEach((btn) => {
-        btn.btnUpdate(mouse);
-    });
+    for(button of upgradeButtonsArray) {
+        button.btnUpdate(mouse);
+    }
 
-    // buildings.forEach((building) => {
-    //     building.dragAndDrop(mouse, activeBuilding);
-    // });
+    for(button of contextMenuArray) {
+        button.btnUpdate(mouse);
+    }
 };  
 
-function drawContextMenu() {
-    contextMenuArray.forEach((contextMenu) => {
-        // PLACEHOLDER___contextMenu.update(mouse);
-    });
-};
 
-function drawUIs() {
+function drawUB() {
     //looping through upgradeButtonsArray and calling UI method drawBtn() 
     //to create and render the buttons. Works with the 'event listener' below
 
-    for (let i = 0; i < upgradeButtonsArray.length; i++) {
-        const ub = upgradeButtonsArray[i];
+    for (ub of upgradeButtonsArray){
         const bn = ub.buttonName;
 
         switch(bn){
@@ -484,21 +495,13 @@ function drawUIs() {
                 ub.drawBtn();
         }
     }
-    //this needs refactored once I get around to the context menu
-    //the solution above for buttons is much cleaner, and will
-    //be easier to add more functionality later without rewriting
-    //you're welcome future me
-
-    contextMenuArray.forEach((menu) => {
-        if(btn.buttonName === 'upgradeBtn'){
-            menu.drawContextMenu();
-        }
-    })
 };  
 
 
 
-let btn = new UI; //this is temporarily(lol) handling an error with btn being undefined
+
+
+let btn = new UI; //this is temporarily(lol...it's been 6 months) handling an error with btn being undefined
 let moveBtn = new UI;
 let tower = null;
 
@@ -558,7 +561,7 @@ window.addEventListener('mousemove', (event) => {
             break
         };
     };
-})
+});
 
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~//
             //~~SELECTED ICON INDICATOR~~//
@@ -567,8 +570,8 @@ window.addEventListener('mousemove', (event) => {
 let selectedIcon = null;
 //aaa
 window.addEventListener('click', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
+    // mouse.x = e.clientX;
+    // mouse.y = e.clientY;
     
 
     for (let i = 0; i < iconArray.length; i++) {
@@ -605,11 +608,8 @@ window.addEventListener('click', (e) => {
 let lifespan;
 let activeBuilding = [];
 
-
+//creates upgrade menu onclick.
 window.addEventListener('click', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-    
     let iconMenu = ['upgrade', 'move', 'sell'];
     let lineWidth = 3;
     let textColor = 'white';
@@ -625,10 +625,9 @@ window.addEventListener('click', (e) => {
 
         //creates upgrade menu.
 
-        buildings.forEach((building) => {
+        for (building of buildings) {
              if (collisionWithPosition(mouse, building)) {
                 activeBuilding = building;
-                console.log(activeBuilding.position.x, activeBuilding.position.y);
                 
                 iconArray.forEach(icon => {
                     if (icon.buttonName.toLowerCase() === activeBuilding.towerType) {
@@ -649,7 +648,7 @@ window.addEventListener('click', (e) => {
                     buttonPositionY = buttonPositionY + height;
                 });
             };
-        });
+        };
 
         //handles the upgrade menu on_click actions 'upgrade', 'move', 'sell'.
         for (let btn of upgradeButtonsArray) {
@@ -685,28 +684,22 @@ window.addEventListener('click', (e) => {
             }
         }           
     };
+    
 });
 
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
             //~~3 EVENT LISTENERS FOR MOVING BUILDINGS~~//
             //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 
-//I feel like there's a better way to do this, but I'm just happy it works.
-//Future me can deal with pesky effeciency issues, I already cleaned up past me's mess with this one.
-
+//handles assingments for movable buildings, 
+//and stores original position in case something goes wrong or cancelled *!(need to add a 'cancel' feature).
 
 let originalPosition;
 let originalCenter;
 let dragging = false;
 let beingDragged = false;
 
-
-//handles assingments for movable buildings, 
-//and stores original position in case something goes wrong or cancelled *!(need to add a 'cancel' feature).
-
 window.addEventListener('mousedown', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
 
     if (dragging) {
         for (building of buildings) {
@@ -729,12 +722,8 @@ window.addEventListener('mousedown', (e) => {
 });
 
 
-
 //handles the movement of the building while dragging.
 canvas.addEventListener('mousemove', function(e){
-
-    mouse.x = e.x - canvasPosition.left;
-    mouse.y = e.y - canvasPosition.top;
 
     if (beingDragged) { 
         for (b of buildings) {
@@ -760,10 +749,7 @@ canvas.addEventListener('mousemove', function(e){
 
 //BUG: [1] if a building is dropped over a non-active tile, and reverts to it's OG position,
 //it does not reset the tile to it's original state. Meaning, you can stack buildings on top of each other.
-canvas.addEventListener('mouseup', function(e){
-
-    mouse.x = e.x - canvasPosition.left;
-    mouse.y = e.y - canvasPosition.top;
+canvas.addEventListener('mouseup', function(){
 
     if (beingDragged) {
         for (b of buildings) {
@@ -812,8 +798,106 @@ canvas.addEventListener('mouseup', function(e){
     };
 });
 
+
+contextMenuArray = [];
+
+let contextMenu = false;
+
+canvas.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    let drawMenu = false;
+
+    let targetingOrderArray = ['first', 'last', 'strong', 'weak'];
+    let lineWidth = 2;
+    let textColor = 'white';
+    let textColor2 ='offwhite';
+    let fill = '#74B3CE';
+    let onActionFill = '#4092B5';
+    let lineColor = '#25556A';
+    let onActionLineColor = '#1B3D4B';
+  
+    //sets the position of the context menu buttons.
+    for(b of buildings){
+        if (collisionWithPosition(mouse, b)) {
+            drawMenu = true;
+            activeBuilding = b;
+            contextMenu = true;
+            width = b.width / 2;
+            height = b.height / 4;
+            buttonPositionX = b.position.x + (width * 2);
+            buttonPositionY = b.position.y + (height / 4)
+        };
+    };
+    //creates the buttons and pushes them to the contextMenuArray.
+    if(drawMenu) {
+        for (button of targetingOrderArray) {
+            contextMenuArray.push(
+                new UI(button, activeBuilding, width, height, buttonPositionX, buttonPositionY,
+                        lineWidth, textColor, textColor2, fill, onActionFill, lineColor, onActionLineColor)
+            );
+            buttonPositionY = buttonPositionY + height;
+        };
+    };
+});
+
+
+//handles the click events for the context menu buttons. (right now, it only outputs to the console.)
+canvas.addEventListener('click', function(e){ 
+
+    for(let btn of contextMenuArray){ 
+        if (collision(mouse, btn)) {
+            btn = btn.buttonName;
+
+            switch(btn){
+                case 'first':
+                    enemyToTarget = btn;
+                    console.log(btn);
+                    contextMenuArray = [];
+                    break;
+                case 'last':
+                    enemyToTarget = btn;
+                    console.log(btn);
+                    contextMenuArray = [];
+                    break;
+                case 'strong':
+                    enemyToTarget = btn;
+                    console.log(btn);
+                    contextMenuArray = [];
+                    break;
+                case 'weak':
+                    enemyToTarget = btn;
+                    console.log(btn);
+                    contextMenuArray = [];
+                    break;
+            }
+        }
+    }
+});
+
+function drawContextMenu() {
+    //looping through upgradeButtonsArray and calling UI method drawBtn() 
+    //to create and render the buttons. Works with the 'event listener' below
+
+    for (btn of contextMenuArray){
+        const bn = btn.buttonName;
+
+        switch(bn){
+            case 'first':
+            case 'last':
+            case 'strong':
+            case 'weak':
+                btn.drawBtn();
+        };
+    };
+}; 
+
+
+
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+
+
