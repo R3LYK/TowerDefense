@@ -176,6 +176,23 @@ class Cell {
     };
 };
 
+class Stocks {
+    constructor({position}) {
+        this.position = position;
+        this.width = 50;
+        this.height = 50;
+        this.color = 'white';
+    };
+
+    draw() {
+        c.fillStyle = this.color;
+        c.lineWidth = 1;
+        c.strokeStyle = 'black';
+        c.strokeRect(this.position.x, this.position.y, this.width, this.height);
+        c.fillRect(this.position.x, this.position.y, this.width, this.height);
+    };
+};
+
 class Enemy {
     constructor({ position = {x: 0, y: 0}}) {
         this.position = position;
@@ -252,6 +269,9 @@ class Broker extends Enemy {
         this.color = 'black';
         this.money = 50;
         this.speed = 1;
+        this.enemyType = 'broker';
+        this.holdingStock = true; //not being used, but might need eventually
+        this.isHolding = [];
     };
 };
 
@@ -265,6 +285,7 @@ class HFManager extends Enemy {
         this.color = 'rgb(69, 26, 16)';
         this.money = 100;
         this.speed = .8;
+        this.isHolding = [];
     };
 };
 
@@ -284,12 +305,12 @@ class Building {
         this.radiusColor = 'rgba(255, 255, 255, .3)';
         this.canBeMoved = false;
         this.isMoving = false;
-        this.btarget = bt;
         this.activeUI = false;
+        this.canAttack = true;
     };
 
     draw() {
-            c.fillStyle = this.color;
+            c.fillStyle = this.activeColor;
             c.fillRect(this.position.x, this.position.y, this.width, 64);
             
             c.beginPath();
@@ -331,7 +352,7 @@ class WaterTower extends Building {
     constructor({position = {x: 0, y: 0}}) {
         super(Building);
         this.position = position;
-        this.width = 64 * 2;
+        this.width = 64;
         this.height = 64;
         this.center = {
             x: this.position.x + this.width /2,
@@ -342,7 +363,9 @@ class WaterTower extends Building {
         this.towerType = 'watertower';
         this.special = 'slow enemy';
         this.towerLevel = 1;
-        this.color = 'blue';
+        this.color = 'rgba(0,0,255)';
+        this.moveableColor = 'rgba(0,0,255, .5)';
+        this.activeColor = this.color;
         this.fireRadius = 175;
         this.damage = .5;
         this.cost = 1500;
@@ -366,7 +389,9 @@ class FireTower extends Building {
         this.frames = 0;
         this.towerType = 'firetower';
         this.towerLevel = 1;
-        this.color = 'red';
+        this.color = 'rgba(255,0,0)';
+        this.moveableColor = 'rgba(255,0,0, .5)';
+        this.activeColor = this.color;
         this.fireRadius = 250;
         this.damage = 5;
         this.cost = 1000;
@@ -388,7 +413,9 @@ class IceTower extends Building {
         this.frames = 0;
         this.towerType = 'icetower';
         this.towerLevel = 1;
-        this.color = 'purple';
+        this.color = 'rgba(0,255,255)';
+        this.moveableColor = 'rgba(0,255,255, .5)';
+        this.activeColor = this.color;
         this.fireRadius = 225;
         this.damage = 10;
         this.cost = 1000;
@@ -410,7 +437,9 @@ class WindTower extends Building {
         this.frames = 0;
         this.towerType = 'windtower';
         this.towerLevel = 1;
-        this.color = 'white';
+        this.color = 'rgba(255,255,0)';
+        this.moveableColor = 'rgba(255,255,0, .5)';
+        this.activeColor = this.color;
         this.fireRadius = 190;
         this.damage = 100;
         this.cost = 1000;
