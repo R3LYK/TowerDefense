@@ -140,6 +140,7 @@ function sleep(ms) {
 //~~FUNCTIONS~~//
 //~~~~~~~~~~~~~//
 
+//TEMP~~TEMP~TEMP//
 //~~calculating grid (temporary for dev purposes)~~//
 function createGrid() {
   for (let y = 0; y < canvas.height; y += cellSize) {
@@ -161,12 +162,31 @@ function handleGameGrid() {
 function spawnEnemies(enemyCount, enemyType, offSet) {
   for (let i = 1; i < enemyCount; i++) {
     const xOffset = i * offSet;
+    if (enemyType === stockBroker) {
+      isHolding = new Stocks({ x: 0, y: 0 });
+    }
     enemies.push(
       new enemyType({
         position: { x: waypoints[0].x - xOffset, y: waypoints[0].y },
       })
     );
   }
+
+  //I've broken this, trying to fix it...
+
+  //[BUG: it's supposed to give each 'stockBroker' a single stock to carry,
+  //but it's giving them two. The way that 'was working' was turning 'isHolding' into an object
+  //versus an array holding an object.
+  enemies.forEach((e) => {
+    if (e instanceof stockBroker) {
+      e.isHolding.push(new Stocks({ x: 0, y: 0 }));
+      //[BUG TEMP FIX: removing the extra item from the array.
+      //I'd really like to find the root cause of this though, sorry future me.
+      if (e.isHolding.length > 1) {
+        e.isHolding.splice(0, 1);
+      }
+    }
+  });
 }
 
 let gameRunning = true;
@@ -174,9 +194,10 @@ let roundStart = true;
 
 roundDelay();
 
-let droppedStocks = [];
+let droppedItems = [];
 
-function removeEnemyNotKilled() {
+//this is attrocious...present me is embarrassed of past me.
+function enemySpawnAndRemoval() {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const enemy = enemies[i];
     enemy.update();
@@ -316,21 +337,23 @@ function targetEnemy() {
 
         if (distance < projectile.enemy.radius + projectile.radius) {
           projectile.enemy.health -= building.damage;
-          if (projectile.enemy.health <= 0) {
 
-            //This is temporary, for dropping stocks.
-            //The plan...for now...is to have different enemies drop different things, 
-            //and some pick up different things if passed.
-            if (projectile.enemy.enemyType === "broker") {
-                droppedStocks.push(
-                  new Stocks({
-                    position: {
-                      x: projectile.enemy.position.x,
-                      y: projectile.enemy.position.y,
-                    },
-                  })
-                );
-              }
+          //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+          //~~~ALL OF THIS NEEDS TO BE~~~//
+          //~~~~~~~~~~REFACTORED~~~~~~~~~//
+          if (projectile.enemy.health <= 0) {
+            //this should be solved by the enemy.currentHoldings value...
+            //once I get it working
+            if (projectile.enemy.isHolding.length > 0) {
+              const holding = projectile.enemy.isHolding;
+              holding.forEach((item) => {
+                item.position = projectile.enemy.position;
+              });
+              droppedItems.push(projectile.enemy.isHolding[0]);
+              projectile.enemy.isHolding.splice(0, 1);
+            }
+            //^^^^^^^^^^^^^^^^^^^^^^^^^^//
+
             const enemyIndex = enemies.findIndex((enemy) => {
               playerMoney += enemy.money;
               moneyUpdate();
@@ -427,12 +450,47 @@ function animate(timeStamp) {
   //available function under window.requestAnimationFrame
   c.drawImage(image, 0, 0);
   handleGameGrid(); // creates grid layover for testing and dev purposes
-  removeEnemyNotKilled(); // removes enemies if health === 0
+  enemySpawnAndRemoval(); // removes enemies if health === 0
   placeTiles(); //displays acceptable tile placement points
   targetEnemy(); // handles targeting of 'basic' enemies
   drawIcons(); // Draws icons
   drawUB();
   drawContextMenu();
+  drawDroppedStocks(); //TEMP TEMP TEMP
+  //TEMP_enemyOverlapsWithDroppedItem()
+}
+
+function drawDroppedStocks() {
+  if (droppedItems.length > 0) {
+    droppedItems.forEach((stock) => {
+      stock.draw();
+    });
+  }
+}
+
+//right now, this treats 'circles' as if their true area is a square, because I'm lazy, and horrible at geometry,
+//but more importantly, the circles are just placeholders...so I'll call it effeciency.
+function shapeCollision(circleA, squareB) {
+  if (
+    circleA.position.x + circleA.radius * 2 >= squareB.position.x &&
+    circleA.position.x <= squareB.position.x + squareB.width &&
+    circleA.position.y + circleA.radius * 2 >= squareB.position.y &&
+    circleA.position.y <= squareB.position.y + squareB.height
+  ) {
+    return true;
+  }
+}
+
+function TEMP_enemyOverlapsWithDroppedItem() {
+  enemies.forEach((enemy) => {
+    droppedItems.forEach((stock) => {
+      if (stock instanceof Stocks) {
+        if (shapeCollision(enemy, stock)) {
+          console.log("COLLISION");
+        }
+      }
+    });
+  });
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
@@ -489,12 +547,6 @@ function drawIcons() {
 
   for (button of contextMenuArray) {
     button.btnUpdate(mouse);
-  }
-
-  //TEMPORARY FOR TESTING STOCK DROPS
-
-  for (st of droppedStocks) {
-    st.draw();
   }
 }
 
@@ -602,7 +654,6 @@ window.addEventListener("click", (e) => {
     if (mouseTracker && mouse.clicked) {
     }
   }
-
 
   //Right now, it's not pulling the actual building cost, but the cost of waterTower instead.
   iconArray.forEach((icon) => {
@@ -826,11 +877,9 @@ canvas.addEventListener("mouseup", function () {
   }
 });
 
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 //~~2 EVENT LISTENERS FOR CONTEXT MENU~~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
-
 
 let contextMenuArray = [];
 let contextMenu = false;
@@ -937,11 +986,11 @@ function drawContextMenu() {
 //TEMPORARY TESTING FOR STOCK DROPS
 
 canvas.addEventListener("click", function () {
-  if (droppedStocks.length > 0) {
-    for (stock of droppedStocks) {
+  if (droppedItems.length > 0) {
+    for (stock of droppedItems) {
       if (collisionWithPosition(mouse, stock)) {
-        //remove stock from droppedStocks array
-        droppedStocks.splice(droppedStocks.indexOf(stock), 1);
+        //remove stock from droppedItems array
+        droppedItems.splice(droppedItems.indexOf(stock), 1);
       }
     }
   }
@@ -951,3 +1000,38 @@ canvas.addEventListener("click", function () {
 //~~~END~~~~~~END~~~~~END~~~~~~END~~~~//
 //~mouse tracking and event listeners~//
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+//~~EVENT LISTENERS FOR DEV TOOLS~~//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+canvas.addEventListener("click", function (event) {
+  //holding shift + right click will output the object to the console.
+  if (event.shiftKey) {
+    for (e of enemies) {
+      if (collisionWithPosition(mouse, e)) {
+        console.log(e);
+        console.log(droppedItems);
+      }
+    }
+    for (b of buildings) {
+      if (collisionWithPosition(mouse, b)) {
+        console.log(b);
+      }
+    }
+  }
+
+  if (event.ctrlKey) {
+    for (e of enemies) {
+      if (collisionWithPosition(mouse, e)) {
+        if (e.isHolding.length > 0) {
+          e.isHolding.position = e.position;
+
+          droppedItems.push(e.isHolding);
+        }
+        //remove e from array
+        enemies.splice(enemies.indexOf(e), 1);
+      }
+    }
+  }
+});
